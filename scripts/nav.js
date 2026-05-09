@@ -23,6 +23,7 @@ export const NAV = [
       { slug: 'processors', title: 'Processors' },
       { slug: 'publishing', title: 'Publishing' },
       { slug: 'advanced', title: 'Advanced features' },
+      { slug: 'architecture', title: 'Behind the scenes' },
     ],
   },
   {

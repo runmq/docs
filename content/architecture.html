@@ -1,0 +1,269 @@
+<div class="eyebrow">Behind the scenes</div>
+<h1>How RunMQ works <em>internally</em>.</h1>
+<p class="lead">
+  RunMQ is a thin, opinionated layer over RabbitMQ. The whole library boils down to a small number of exchanges,
+  per-processor queues, and a clever use of dead-letter exchanges to do retries with delay. This page walks the topology
+  end-to-end, with the actual broker objects RunMQ creates.
+</p>
+
+<h2>The big picture</h2>
+
+<p>
+  A single <strong>router exchange</strong> is the entry point for everything you publish. RunMQ creates one queue per
+  processor (with its own DLQ) and a per-processor <strong>retry-delay queue</strong> that uses RabbitMQ's TTL +
+  dead-letter mechanism to "park" failed messages until the delay expires, then re-injects them into the original queue.
+</p>
+
+<div class="topology">
+  <svg viewBox="0 0 920 460" role="img" aria-label="RunMQ topology overview" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+      </marker>
+      <marker id="arrAccent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/>
+      </marker>
+    </defs>
+
+    <!-- Publisher -->
+    <g class="topo-node">
+      <rect x="20" y="40" width="140" height="44" rx="8"/>
+      <text x="90" y="68" text-anchor="middle">publisher</text>
+    </g>
+
+    <!-- Router exchange -->
+    <g class="topo-exchange">
+      <rect x="220" y="34" width="200" height="56" rx="10"/>
+      <text x="320" y="58" text-anchor="middle" class="topo-strong">_runmq_router</text>
+      <text x="320" y="78" text-anchor="middle" class="topo-sub">topic exchange</text>
+    </g>
+    <line x1="160" y1="62" x2="220" y2="62" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
+
+    <!-- Two processor queues -->
+    <g class="topo-queue">
+      <rect x="500" y="20" width="200" height="56" rx="10"/>
+      <text x="600" y="44" text-anchor="middle" class="topo-strong">queue: emailService</text>
+      <text x="600" y="64" text-anchor="middle" class="topo-sub">durable · DLX → DLR</text>
+    </g>
+    <line x1="420" y1="50" x2="500" y2="48" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
+    <text x="455" y="40" class="topo-edge">user.created</text>
+
+    <g class="topo-queue">
+      <rect x="500" y="100" width="200" height="56" rx="10"/>
+      <text x="600" y="124" text-anchor="middle" class="topo-strong">queue: smsService</text>
+      <text x="600" y="144" text-anchor="middle" class="topo-sub">durable · DLX → DLR</text>
+    </g>
+    <line x1="420" y1="76" x2="500" y2="128" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
+    <text x="455" y="118" class="topo-edge">user.created</text>
+
+    <!-- Retry path label -->
+    <text x="600" y="180" text-anchor="middle" class="topo-edge">on reject:  basic.nack(requeue=false)</text>
+
+    <!-- Dead-letter router exchange -->
+    <g class="topo-exchange">
+      <rect x="500" y="200" width="200" height="56" rx="10"/>
+      <text x="600" y="224" text-anchor="middle" class="topo-strong">_runmq_dead_letter_router</text>
+      <text x="600" y="244" text-anchor="middle" class="topo-sub">topic exchange</text>
+    </g>
+    <line x1="600" y1="156" x2="600" y2="200" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#arrAccent)"/>
+
+    <!-- Retry-delay queue -->
+    <g class="topo-queue topo-queue--accent">
+      <rect x="220" y="200" width="240" height="56" rx="10"/>
+      <text x="340" y="224" text-anchor="middle" class="topo-strong">_runmq_retry_delay_smsService</text>
+      <text x="340" y="244" text-anchor="middle" class="topo-sub">TTL = attemptsDelay · DLX → router</text>
+    </g>
+    <line x1="500" y1="228" x2="460" y2="228" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#arrAccent)"/>
+    <text x="475" y="218" class="topo-edge">smsService</text>
+
+    <!-- Re-inject from delay queue back to router (TTL expires → DLX = router → routing key = processor name) -->
+    <path d="M 220 228 Q 120 228 120 110 Q 120 50 220 50" fill="none" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#arrAccent)"/>
+    <text x="60" y="120" class="topo-edge" transform="rotate(-90 60 120)">TTL expires → re-inject</text>
+
+    <!-- DLQ -->
+    <g class="topo-queue topo-queue--dlq">
+      <rect x="500" y="290" width="200" height="56" rx="10"/>
+      <text x="600" y="314" text-anchor="middle" class="topo-strong">_runmq_dlq_smsService</text>
+      <text x="600" y="334" text-anchor="middle" class="topo-sub">durable · final failures</text>
+    </g>
+    <line x1="600" y1="256" x2="600" y2="290" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
+    <text x="612" y="276" class="topo-edge">attempts ≥ max</text>
+
+    <!-- Legend -->
+    <g class="topo-legend" transform="translate(20, 380)">
+      <rect x="0" y="0" width="14" height="14" rx="3" class="topo-legend-exchange"/>
+      <text x="22" y="11">exchange</text>
+      <rect x="100" y="0" width="14" height="14" rx="3" class="topo-legend-queue"/>
+      <text x="122" y="11">queue</text>
+      <rect x="190" y="0" width="14" height="14" rx="3" class="topo-legend-accent"/>
+      <text x="212" y="11">retry path</text>
+    </g>
+  </svg>
+</div>
+
+<h2>The objects RunMQ creates</h2>
+<p>For every processor named <code>name</code>, RunMQ asserts the following on the broker:</p>
+
+<table class="props">
+  <thead><tr><th>Object</th><th>Name</th><th>Configured with</th></tr></thead>
+  <tbody>
+    <tr><td>Topic exchange</td><td><code>_runmq_router</code></td><td>Shared. The single entry point for all publishes.</td></tr>
+    <tr><td>Topic exchange</td><td><code>_runmq_dead_letter_router</code></td><td>Shared. Used to route rejected messages by processor name.</td></tr>
+    <tr><td>Processor queue</td><td><code>{name}</code></td><td>Durable. <code>DLX = _runmq_dead_letter_router</code>, <code>DLRK = {name}</code>.</td></tr>
+    <tr><td>Retry-delay queue</td><td><code>_runmq_retry_delay_{name}</code></td><td>Durable. <code>DLX = _runmq_router</code>. TTL = <code>attemptsDelay</code> (queue arg or policy).</td></tr>
+    <tr><td>Dead-letter queue</td><td><code>_runmq_dlq_{name}</code></td><td>Durable. <code>DLX = _runmq_router</code>, <code>DLRK = {name}</code> — so messages can be replayed.</td></tr>
+    <tr><td>Metadata</td><td><code>_runmq_metadata_{name}</code></td><td>Stored via the management API for dashboards (max retries, timestamps).</td></tr>
+  </tbody>
+</table>
+
+<h2>The bindings</h2>
+<p>Bindings determine how a published message reaches a queue. RunMQ wires four of them per processor:</p>
+
+<div class="flow"><b>_runmq_router</b>            ── topic={topic} ────────────►  queue: <b>{name}</b>
+<b>_runmq_router</b>            ── topic={name} ─────────────►  queue: <b>{name}</b>          (retry re-injection)
+<b>_runmq_dead_letter_router</b> ── topic={name} ─────────────►  queue: <b>_runmq_retry_delay_{name}</b>
+<b>_runmq_dead_letter_router</b> ── topic=_runmq_dlq_{name} ──►  queue: <b>_runmq_dlq_{name}</b></div>
+
+<p>The two bindings on the processor queue are deliberate:</p>
+<ul>
+  <li><strong>By topic</strong> — handles the publish path: <code>publish('user.created', …)</code> reaches every processor subscribed to <code>user.created</code>.</li>
+  <li><strong>By processor name</strong> — handles the retry path: when a delayed message expires its TTL, it's dead-lettered back to <code>_runmq_router</code> with the routing key set to the processor name. Only <em>that one</em> processor's queue picks it up — siblings don't see retries that aren't theirs.</li>
+</ul>
+
+<h2>Lifecycle of a message</h2>
+
+<h3>1. Publish</h3>
+<p>Your <code>publish(topic, payload)</code> call writes a JSON-encoded envelope to the AMQP buffer for the <code>_runmq_router</code> exchange with routing key = <code>topic</code>. Nagle's algorithm is disabled on the socket so messages flush immediately.</p>
+
+<h3>2. Routing &amp; fan-out</h3>
+<p>The router exchange copies the message to every bound processor queue. Two processors on <code>user.created</code> means two independent copies — that's pub/sub, atomic at the broker level. No application-side fan-out, no risk of "delivered to A but not B."</p>
+
+<h3>3. Consume</h3>
+<p>Each processor's consumer pulls the message and runs it through a small chain of decorators (more on that below). If your handler resolves, the message is acked and removed.</p>
+
+<h3>4. Failure → delay</h3>
+<p>If your handler throws, the message is <strong>rejected with <code>requeue=false</code></strong>. RabbitMQ's dead-letter machinery kicks in:</p>
+<ul>
+  <li>Processor queue's DLX is <code>_runmq_dead_letter_router</code>, DLRK = processor name.</li>
+  <li>That exchange has a binding to <code>_runmq_retry_delay_{name}</code>, so the message lands there.</li>
+  <li>The retry queue has a TTL — either as a queue argument (<code>messageTtl</code>) or via a RabbitMQ policy. The message sits idle until the TTL expires.</li>
+</ul>
+
+<h3>5. Re-injection</h3>
+<p>When TTL expires, RabbitMQ dead-letters the message <em>again</em>. The retry queue's DLX is <code>_runmq_router</code> — and because messages keep their original routing key when dead-lettered (which RunMQ relies on), the message is re-routed back to the same processor queue. The handler sees it again.</p>
+
+<h3>6. Final failure → DLQ</h3>
+<p>RabbitMQ writes an <code>x-death</code> header that records every reject + timestamp. RunMQ counts how many times this message has been rejected for the processor's queue. Once the count reaches <code>attempts</code>, the message is <em>not</em> sent through the delay queue again — it's published directly to <code>_runmq_dlq_{name}</code> via the dead-letter exchange and acked. There it waits for inspection or replay.</p>
+
+<div class="callout callout--info">
+  <strong>The DLQ can replay.</strong> The DLQ's own DLX points back to the router with routing key = processor name. If you want to replay a DLQ'd message, you can move it back from the DLQ and it will land in the original processor queue exactly as a fresh delivery would.
+</div>
+
+<h2>Counting attempts: the <code>x-death</code> header</h2>
+
+<p>
+  RabbitMQ stamps each dead-lettered message with an <code>x-death</code> header — an array of records describing each reject
+  event. RunMQ reads it to decide whether to retry or route to the DLQ:
+</p>
+
+<pre><code data-lang="ts">private getRejectionCount(message: RabbitMQMessage): number {
+  const xDeath = message.headers?.["x-death"];
+  if (!Array.isArray(xDeath)) return 1;
+  const deathRecord = xDeath.filter(e => e && e.reason == 'rejected')[0];
+  return deathRecord ? deathRecord.count + 1 : 1;
+}</code></pre>
+
+<p>This is what powers the "retry up to N times" semantics — RunMQ doesn't track attempts itself, the broker does. That makes retries durable across restarts: kill the consumer mid-flight, restart it, and the retry counter is still right.</p>
+
+<h2>Two flavors of retry delay</h2>
+
+<table class="props">
+  <thead><tr><th>Mode</th><th>How TTL is set</th><th>Trade-off</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>usePoliciesForDelay: false</code> (default)</td>
+      <td>Queue argument (<code>messageTtl</code>) baked into the queue at declare time.</td>
+      <td>Simple, no management API needed. <strong>Changing the delay later requires deleting and re-declaring the queue.</strong></td>
+    </tr>
+    <tr>
+      <td><code>usePoliciesForDelay: true</code> (recommended)</td>
+      <td>RabbitMQ policy applied via the management HTTP API.</td>
+      <td>Delay can be changed at runtime without queue surgery. Requires the <code>management</code> config block.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+  Policies are why <a href="https://github.com/runmq/pulse" target="_blank" rel="noopener">RunMQ Pulse</a> can dial retry delays
+  live during an incident. The dashboard updates the policy; the broker reflows the TTL; in-flight retries pick up the new delay.
+</p>
+
+<h2>The consumer pipeline</h2>
+
+<p>
+  Each delivery goes through a short chain of decorators before it ever reaches your handler. The chain is built per-message
+  in <code>RunMQConsumerCreator.runProcessor</code>:
+</p>
+
+<pre><code data-lang="ts">new RunMQExceptionLoggerProcessor(
+  new RunMQSucceededMessageAcknowledgerProcessor(
+    new RunMQFailedMessageRejecterProcessor(
+      new RunMQRetriesCheckerProcessor(
+        new RunMQFailureLoggerProcessor(
+          new RunMQBaseProcessor&lt;T&gt;(yourHandler, config, deserializer)
+        ),
+        config, DLQPublisher, logger
+      )
+    )
+  ),
+  logger
+).consume(rabbitmqMessage);</code></pre>
+
+<p>From outside in, each decorator owns a single concern:</p>
+
+<table class="props">
+  <thead><tr><th>Layer</th><th>Responsibility</th></tr></thead>
+  <tbody>
+    <tr><td><code>ExceptionLogger</code></td><td>Catches anything that escapes the chain and logs it.</td></tr>
+    <tr><td><code>SucceededMessageAcknowledger</code></td><td>Acks the message after the inner chain returns success.</td></tr>
+    <tr><td><code>FailedMessageRejecter</code></td><td>Nacks (with <code>requeue=false</code>) on failure → triggers the DLX path.</td></tr>
+    <tr><td><code>RetriesChecker</code></td><td>Reads <code>x-death</code>, decides retry vs. DLQ, publishes to DLQ when exhausted.</td></tr>
+    <tr><td><code>FailureLogger</code></td><td>Logs the handler exception with context.</td></tr>
+    <tr><td><code>BaseProcessor</code></td><td>Deserializes the payload and calls <em>your</em> handler.</td></tr>
+  </tbody>
+</table>
+
+<p>
+  This is a small price to pay (≈6 object allocations per message) for code where each concern is independently testable and
+  swappable. It's also why retries, acks, and DLQ routing never accidentally interleave — they live in separate, ordered steps.
+</p>
+
+<h2>Naming conventions</h2>
+
+<p>Everything RunMQ creates is prefixed with <code>_runmq_</code>, so it's easy to find — and easy to leave alone — in the RabbitMQ management UI:</p>
+
+<table class="props">
+  <thead><tr><th>Prefix</th><th>Object</th></tr></thead>
+  <tbody>
+    <tr><td><code>_runmq_router</code></td><td>Router exchange.</td></tr>
+    <tr><td><code>_runmq_dead_letter_router</code></td><td>Dead-letter router exchange.</td></tr>
+    <tr><td><code>_runmq_retry_delay_{name}</code></td><td>Per-processor retry-delay queue.</td></tr>
+    <tr><td><code>_runmq_dlq_{name}</code></td><td>Per-processor DLQ.</td></tr>
+    <tr><td><code>_runmq_message_ttl_operator_policy</code></td><td>RabbitMQ policy that controls retry-delay TTL (when <code>usePoliciesForDelay: true</code>).</td></tr>
+    <tr><td><code>_runmq_metadata_{name}</code></td><td>Per-processor metadata stored via the management API.</td></tr>
+  </tbody>
+</table>
+
+<h2>What this design buys you</h2>
+
+<ul>
+  <li><strong>Atomic pub/sub with isolation.</strong> One publish, N independent consumer queues — failures stay contained.</li>
+  <li><strong>Durable retries.</strong> Attempt counts live in the broker (<code>x-death</code>), not in your process. Crashes don't reset retries.</li>
+  <li><strong>Tunable delays without redeploys.</strong> Policies let you change retry behavior at runtime.</li>
+  <li><strong>Replay-friendly DLQs.</strong> The DLQ is itself dead-letter-bound back to the router, so replay is just "shovel back."</li>
+  <li><strong>Discoverable topology.</strong> Predictable naming + metadata stored in the broker means dashboards (like Pulse) can describe your system without seeing your code.</li>
+</ul>
+
+<div class="pullquote">
+  RunMQ doesn't reinvent broker primitives — it composes them. Every "feature" you see is the right combination of an exchange, a binding, a TTL, and a header.
+</div>

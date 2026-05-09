@@ -515,6 +515,84 @@
   border-left: 2px solid var(--accent);
 }
 
+/* ───── Topology SVG diagram ───── */
+.topology {
+  margin: 22px 0 28px;
+  padding: 22px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow-x: auto;
+}
+
+.topology svg {
+  width: 100%;
+  height: auto;
+  min-width: 720px;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.topology .topo-node rect {
+  fill: var(--bg-soft);
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+
+.topology .topo-exchange rect {
+  fill: color-mix(in oklab, var(--accent) 8%, var(--surface));
+  stroke: color-mix(in oklab, var(--accent) 40%, var(--border));
+  stroke-width: 1;
+}
+
+.topology .topo-queue rect {
+  fill: var(--bg-soft);
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+
+.topology .topo-queue--accent rect {
+  fill: color-mix(in oklab, var(--accent) 6%, var(--bg-soft));
+  stroke: color-mix(in oklab, var(--accent) 32%, var(--border-strong));
+  stroke-dasharray: 4 3;
+}
+
+.topology .topo-queue--dlq rect {
+  fill: color-mix(in oklab, #d8a300 6%, var(--bg-soft));
+  stroke: color-mix(in oklab, #d8a300 32%, var(--border-strong));
+}
+
+.topology text { fill: var(--text-2); }
+
+.topology .topo-strong {
+  fill: var(--text);
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.topology .topo-sub {
+  fill: var(--text-3);
+  font-size: 11px;
+}
+
+.topology .topo-edge {
+  font-size: 11px;
+  fill: var(--text-3);
+}
+
+.topology .topo-legend rect.topo-legend-exchange {
+  fill: color-mix(in oklab, var(--accent) 8%, var(--surface));
+  stroke: color-mix(in oklab, var(--accent) 40%, var(--border));
+}
+.topology .topo-legend rect.topo-legend-queue {
+  fill: var(--bg-soft);
+  stroke: var(--border-strong);
+}
+.topology .topo-legend rect.topo-legend-accent {
+  fill: var(--accent);
+}
+
 /* ───── Section anchor links ───── */
 .heading-anchor {
   opacity: 0;
