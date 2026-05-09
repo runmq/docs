@@ -33,7 +33,6 @@
 
     <!-- Publisher → Router -->
     <line x1="160" y1="82" x2="270" y2="82" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
-    <text x="215" y="72" text-anchor="middle" class="topo-edge">publish('user.created', …)</text>
 
     <!-- Router exchange -->
     <g class="topo-exchange">
@@ -53,7 +52,6 @@
       <text x="710" y="64" text-anchor="middle" class="topo-sub">durable · DLX → DLR</text>
     </g>
     <line x1="530" y1="48" x2="600" y2="48" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
-    <text x="565" y="38" text-anchor="middle" class="topo-edge">user.created</text>
 
     <!-- smsService queue (bottom) -->
     <g class="topo-queue">
@@ -62,11 +60,9 @@
       <text x="710" y="154" text-anchor="middle" class="topo-sub">durable · DLX → DLR</text>
     </g>
     <line x1="530" y1="138" x2="600" y2="138" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
-    <text x="565" y="128" text-anchor="middle" class="topo-edge">user.created</text>
 
     <!-- smsService → DL router (retry path) -->
     <line x1="710" y1="166" x2="710" y2="220" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#arrAccent)"/>
-    <text x="710" y="195" text-anchor="middle" class="topo-edge">on reject: basic.nack(requeue=false)</text>
 
     <!-- Dead-letter router exchange -->
     <g class="topo-exchange">
@@ -84,11 +80,9 @@
 
     <!-- DL router → retry-delay queue -->
     <line x1="600" y1="248" x2="550" y2="248" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#arrAccent)"/>
-    <text x="575" y="240" text-anchor="middle" class="topo-edge">smsService</text>
 
     <!-- Re-inject from delay queue back to router (TTL expires) -->
     <path d="M 270 248 Q 200 248 200 165 Q 200 82 270 82" fill="none" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#arrAccent)"/>
-    <text x="155" y="165" text-anchor="middle" class="topo-edge" transform="rotate(-90 155 165)">TTL expires → re-inject</text>
 
     <!-- DLQ -->
     <g class="topo-queue topo-queue--dlq">
@@ -97,7 +91,6 @@
       <text x="710" y="364" text-anchor="middle" class="topo-sub">durable · final failures</text>
     </g>
     <line x1="710" y1="276" x2="710" y2="320" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
-    <text x="710" y="300" text-anchor="middle" class="topo-edge">attempts ≥ max</text>
 
     <!-- Legend -->
     <g class="topo-legend" transform="translate(20, 420)">
@@ -110,6 +103,16 @@
     </g>
   </svg>
 </div>
+
+<p>Reading the diagram, following the arrows:</p>
+<ol>
+  <li><strong>Publisher → router.</strong> A <code>publish('user.created', …)</code> call sends the message to the <code>_runmq_router</code> topic exchange with routing key <code>user.created</code>.</li>
+  <li><strong>Router → processor queues.</strong> The router fans the message out to every queue bound to <code>user.created</code> — here, both <code>emailService</code> and <code>smsService</code> get their own independent copy.</li>
+  <li><strong>Processor queue → dead-letter router (on failure).</strong> If the <code>smsService</code> handler throws, the consumer nacks the message with <code>requeue=false</code>. The queue's DLX (<code>_runmq_dead_letter_router</code>) catches it, with routing key set to the processor name.</li>
+  <li><strong>Dead-letter router → retry-delay queue.</strong> The dead-letter router is bound on <code>smsService</code> to <code>_runmq_retry_delay_smsService</code>, where the message parks until its TTL expires.</li>
+  <li><strong>Retry-delay queue → router (re-injection).</strong> Once the TTL fires, RabbitMQ dead-letters the message again. The retry queue's DLX is the original router, and the message keeps its routing key, so it lands back in <code>smsService</code> for another attempt.</li>
+  <li><strong>Processor queue → DLQ (after max attempts).</strong> When RunMQ sees the <code>x-death</code> count reach <code>attempts</code>, it skips the delay loop and publishes straight to <code>_runmq_dlq_smsService</code> for inspection or replay.</li>
+</ol>
 
 <h2>The objects RunMQ creates</h2>
 <p>For every processor named <code>name</code>, RunMQ asserts the following on the broker:</p>
