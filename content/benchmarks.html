@@ -87,7 +87,8 @@
 </table>
 <p>
   Both libraries slow down as payloads grow — serialization and network bytes dominate at 10 KB. The gap between RunMQ and
-  BullMQ narrows at larger sizes because raw transport speed matters less when each message takes longer to move.
+  BullMQ narrows at larger sizes because raw transport speed matters less when each message takes longer to move — though
+  RunMQ is still <strong>3×–6× faster</strong> across every size tested.
 </p>
 
 <h2>Reliability overhead</h2>
