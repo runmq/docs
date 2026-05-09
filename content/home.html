@@ -1,0 +1,124 @@
+<section class="hero">
+  <div class="eyebrow">v1.5.1 · MIT licensed</div>
+  <h1>A message queue you'd actually <em>want</em> to work with.</h1>
+  <p class="hero__lead">
+    RunMQ is a high-performance message queue for Node.js, built on top of RabbitMQ's rock-solid messaging guarantees.
+    It pairs proven reliability with the kind of developer experience teams expect — clean APIs, fault tolerance baked in,
+    and scaling that just works.
+  </p>
+  <div class="hero__actions">
+    <a class="btn btn--primary" href="#/getting-started">Quick start <span class="arrow">→</span></a>
+    <a class="btn btn--ghost" href="#/patterns">Browse patterns</a>
+    <a class="btn btn--mono" href="https://github.com/runmq/queue" target="_blank" rel="noopener">★ GitHub</a>
+  </div>
+</section>
+
+<div class="stat-strip" role="list">
+  <div class="stat" role="listitem">
+    <div class="stat__value">253K<em>/s</em></div>
+    <div class="stat__label">Publish throughput</div>
+  </div>
+  <div class="stat" role="listitem">
+    <div class="stat__value">27K<em>/s</em></div>
+    <div class="stat__label">Consume throughput</div>
+  </div>
+  <div class="stat" role="listitem">
+    <div class="stat__value">0.69<em>ms</em></div>
+    <div class="stat__label">Mean E2E latency</div>
+  </div>
+  <div class="stat" role="listitem">
+    <div class="stat__value">3<em>x–17x</em></div>
+    <div class="stat__label">vs BullMQ</div>
+  </div>
+</div>
+
+<h2>Why teams pick RunMQ</h2>
+
+<div class="features">
+  <div class="feature">
+    <div class="feature__icon">↻</div>
+    <h3>Reliable retries</h3>
+    <p>Failed messages are retried with configurable delays and limits, so transient errors don't take you down.</p>
+  </div>
+  <div class="feature">
+    <div class="feature__icon">⌫</div>
+    <h3>Dead Letter Queues</h3>
+    <p>Once retries are exhausted, the message lands safely in a DLQ where you can inspect or replay it.</p>
+  </div>
+  <div class="feature">
+    <div class="feature__icon">⇉</div>
+    <h3>Pub/Sub, atomic</h3>
+    <p>Publish a message once, every subscribed consumer gets it — no fan-out logic on your side.</p>
+  </div>
+  <div class="feature">
+    <div class="feature__icon">▦</div>
+    <h3>Isolated queues</h3>
+    <p>Each processor owns its queue and its DLQ. One slow consumer can't drag the rest down.</p>
+  </div>
+  <div class="feature">
+    <div class="feature__icon">✓</div>
+    <h3>Schema validation</h3>
+    <p>Optional JSON Schema validation (AJV) catches bad messages before they reach your business logic.</p>
+  </div>
+  <div class="feature">
+    <div class="feature__icon">⇧⇩</div>
+    <h3>Concurrent consumers</h3>
+    <p>Scale horizontally (more instances) or vertically (more consumers per queue, via prefetch).</p>
+  </div>
+</div>
+
+<h2>Install</h2>
+
+<div data-tabs>
+  <div data-tab="Core">
+    <pre><code data-lang="bash">npm install runmq</code></pre>
+  </div>
+  <div data-tab="NestJS">
+    <pre><code data-lang="bash">npm install nestjs-runmq runmq</code></pre>
+  </div>
+</div>
+
+<h2>A minute of code</h2>
+<p>
+  Connect, declare a processor, publish a message. RunMQ takes care of the rest — retries, DLQ wiring, ack/nack semantics, reconnection.
+</p>
+
+<pre><code data-lang="ts">import { RunMQ } from 'runmq';
+
+const runMQ = await RunMQ.start({
+  url: 'amqp://localhost:5672',
+  management: {
+    url: 'http://localhost:15672',
+    username: 'guest',
+    password: 'guest',
+  },
+});
+
+await runMQ.process('user.created', {
+  name: 'emailService',
+  consumersCount: 2,
+  attempts: 3,
+  attemptsDelay: 2000,
+  usePoliciesForDelay: true,
+}, async (message) => {
+  await sendEmail(message.message);
+});
+
+runMQ.publish('user.created', {
+  userId: '123',
+  email: 'user@example.com',
+  name: 'John Doe',
+});</code></pre>
+
+<div class="callout callout--tip">
+  <strong>Using NestJS?</strong> Skip the wiring. <a href="#/nestjs">nestjs-runmq</a> gives you decorator-based processors,
+  an injectable publisher, and full lifecycle integration — all in a few lines.
+</div>
+
+<h2>Where to go next</h2>
+<ul>
+  <li><a href="#/getting-started">Quick start</a> — connect, define a processor, publish a message.</li>
+  <li><a href="#/patterns">Patterns &amp; examples</a> — event-driven architecture, background jobs, pub/sub.</li>
+  <li><a href="#/advanced">Advanced features</a> — schema validation, policy-based delays, custom logging.</li>
+  <li><a href="#/benchmarks">Benchmarks</a> — full numbers vs BullMQ across six dimensions.</li>
+</ul>

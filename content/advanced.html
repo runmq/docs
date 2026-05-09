@@ -1,0 +1,124 @@
+<div class="eyebrow">Core · Advanced</div>
+<h1>Advanced <em>features</em>.</h1>
+<p class="lead">
+  Schema validation, policy-based delays, queue metadata, and custom logging — the knobs you reach for once the basics are humming.
+</p>
+
+<h2>Schema validation</h2>
+<p>
+  Validate messages before they hit your handler, so your business logic only ever sees well-formed data. Currently powered by
+  <a href="https://ajv.js.org/" target="_blank" rel="noopener">AJV</a>; invalid messages can be routed straight to the DLQ for later inspection.
+</p>
+
+<pre><code data-lang="ts">const orderSchema = {
+  type: 'object',
+  required: ['orderId', 'customerId', 'items', 'total'],
+  properties: {
+    orderId: { type: 'string', pattern: '^ORD-[0-9]+$' },
+    customerId: { type: 'string' },
+    items: {
+      type: 'array',
+      minItems: 1,
+      items: {
+        type: 'object',
+        required: ['sku', 'quantity', 'price'],
+        properties: {
+          sku: { type: 'string' },
+          quantity: { type: 'number', minimum: 1 },
+          price: { type: 'number', minimum: 0 },
+        },
+      },
+    },
+    total: { type: 'number', minimum: 0 },
+  },
+};
+
+await mq.process('order.placed', {
+  name: 'orderProcessor',
+  consumersCount: 3,
+  attempts: 3,
+  messageSchema: {
+    type: 'ajv',
+    schema: orderSchema,
+    failureStrategy: 'dlq',  // invalid messages → DLQ
+  },
+}, async (message) => {
+  // message.message is guaranteed to match the schema
+  await processOrder(message.message);
+});</code></pre>
+
+<ul>
+  <li>Validation runs <strong>before</strong> your handler — no runtime errors from bad payloads in your code paths.</li>
+  <li>Only schema-conformant messages reach your business logic; everything else is captured in the DLQ.</li>
+</ul>
+
+<h3>Schema configuration</h3>
+<table class="props">
+  <thead><tr><th>Property</th><th>Type</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td class="prop-name">type</td><td><code>'ajv'</code></td><td>The validator (only AJV today).</td></tr>
+    <tr><td class="prop-name">schema</td><td><code>any</code></td><td>JSON Schema definition.</td></tr>
+    <tr><td class="prop-name">failureStrategy</td><td><code>'dlq'</code></td><td>What to do on validation failure.</td></tr>
+  </tbody>
+</table>
+
+<h2>Policy-based retry delays</h2>
+<p>
+  RunMQ can use RabbitMQ <strong>policies</strong> to manage the delay between attempts. It's off by default, but highly recommended to turn on.
+</p>
+
+<ul>
+  <li>With <code>usePoliciesForDelay: true</code>, the delay TTL lives in a RabbitMQ policy instead of being hard-coded into the queue.</li>
+  <li>Without it, changing the delay later means re-declaring (and sometimes deleting) queues — cumbersome and error-prone.</li>
+  <li>With policies, you can update <code>attemptsDelay</code> on the fly. RunMQ applies it for you.</li>
+</ul>
+
+<div class="callout callout--tip">
+  <strong>Pair it with <a href="https://github.com/runmq/pulse" target="_blank" rel="noopener">RunMQ Pulse</a>.</strong> Once policy-based delays are on, Pulse becomes your control panel: tweak retry delays <em>live from the dashboard</em>, no redeploys and no queue surgery. Production getting noisy? Bump the delay, watch the queues breathe, and dial it back when things settle — all from the UI.
+</div>
+
+<h2>Queue metadata storage</h2>
+<p>
+  RunMQ automatically stores queue metadata using RabbitMQ's parameters API. External tools and dashboards can read this to understand
+  what's running — without ever touching your application code.
+</p>
+
+<table class="props">
+  <thead><tr><th>Field</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td class="prop-name">version</td><td>Schema version for future-proof migrations.</td></tr>
+    <tr><td class="prop-name">maxRetries</td><td>The retry limit configured for the queue.</td></tr>
+    <tr><td class="prop-name">createdAt</td><td>ISO 8601 timestamp from when the queue was first configured.</td></tr>
+    <tr><td class="prop-name">updatedAt</td><td>ISO 8601 timestamp from the most recent configuration change.</td></tr>
+  </tbody>
+</table>
+
+<p>Why it matters:</p>
+<ul>
+  <li><strong>Dashboard-friendly.</strong> Tools can pull this from RabbitMQ's management API and surface "10 retries with 5s delay, then DLQ" automatically.</li>
+  <li><strong>Self-documenting queues.</strong> Your queue configuration is discoverable straight from RabbitMQ — no source code required.</li>
+  <li><strong>Auto-updating.</strong> Config changes update the metadata while preserving <code>createdAt</code> for a clean timeline.</li>
+</ul>
+
+<div class="callout callout--info">
+  This feature requires the RabbitMQ Management Plugin to be enabled — that's how parameters get written and read.
+</div>
+
+<h2>Custom logger</h2>
+<p>RunMQ ships with a default console logger, but you can plug in your own by implementing the <code>RunMQLogger</code> interface:</p>
+
+<pre><code data-lang="ts">import { RunMQLogger, RunMQ } from 'runmq';
+
+class CustomLogger implements RunMQLogger {
+  log(message: string): void {
+    // pipe to Winston / Bunyan / Datadog / etc.
+  }
+
+  error(message: string, error?: any): void {
+    // your error pipeline
+  }
+}
+
+const mq = await RunMQ.start(config, new CustomLogger());</code></pre>
+
+<p>This is the hook you want when piping logs into a centralized stack — both <code>log</code> and <code>error</code> are yours to shape.</p>

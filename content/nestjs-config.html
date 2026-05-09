@@ -1,0 +1,64 @@
+<div class="eyebrow">NestJS · Configuration</div>
+<h1>Async <em>configuration</em>.</h1>
+<p class="lead">
+  Use <code>forRootAsync</code> when your config lives in environment variables, a config service, or anywhere asynchronous.
+</p>
+
+<h2>With a factory</h2>
+<p>The common case with <code>@nestjs/config</code>:</p>
+
+<pre><code data-lang="ts">import { ConfigModule, ConfigService } from '@nestjs/config';
+
+RunMQModule.forRootAsync({
+  imports: [ConfigModule],
+  inject: [ConfigService],
+  useFactory: (config: ConfigService) => ({
+    url: config.getOrThrow('RABBITMQ_URL'),
+    management: {
+      url: config.getOrThrow('RABBITMQ_MANAGEMENT_URL'),
+      username: config.get('RABBITMQ_MANAGEMENT_USER', 'guest'),
+      password: config.get('RABBITMQ_MANAGEMENT_PASS', 'guest'),
+    },
+  }),
+})</code></pre>
+
+<h2>With a class</h2>
+<p>Implement <code>RunMQOptionsFactory</code>:</p>
+
+<pre><code data-lang="ts">import { Injectable } from '@nestjs/common';
+import { RunMQOptionsFactory, RunMQModuleOptions } from 'nestjs-runmq';
+
+@Injectable()
+export class RabbitMQConfig implements RunMQOptionsFactory {
+  createRunMQOptions(): RunMQModuleOptions {
+    return { url: process.env.RABBITMQ_URL! };
+  }
+}
+
+RunMQModule.forRootAsync({ useClass: RabbitMQConfig });
+// or, to reuse an instance already provided elsewhere:
+RunMQModule.forRootAsync({ useExisting: RabbitMQConfig });</code></pre>
+
+<h2>Static config (<code>forRoot</code>)</h2>
+
+<pre><code data-lang="ts">RunMQModule.forRoot({
+  url: 'amqp://guest:guest@localhost:5672',
+  reconnectDelay: 5000,
+  maxReconnectAttempts: 5,
+  management: {
+    url: 'http://localhost:15672',
+    username: 'guest',
+    password: 'guest',
+  },
+})</code></pre>
+
+<div class="callout callout--tip">
+  Providing the <code>management</code> block enables policy-based retry delays, which let you change <code>attemptsDelay</code> on the fly without re-declaring queues.
+</div>
+
+<h2>Tips</h2>
+<ul>
+  <li><strong>Validate config early.</strong> Use <code>getOrThrow()</code> for required vars so misconfiguration fails fast, not at first publish.</li>
+  <li><strong>Single connection per process.</strong> Register <code>RunMQModule</code> exactly once at the root.</li>
+  <li><strong>Don't publish in <code>onModuleInit</code>.</strong> The connection is up by the time NestJS finishes bootstrap, so publish from request handlers, schedulers, or jobs.</li>
+</ul>

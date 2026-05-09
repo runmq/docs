@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>RunMQ — Documentation</title>
+  <meta name="description" content="High-performance message queue for Node.js, built on RabbitMQ. Reliable retries, DLQs, pub/sub, and a developer experience you actually want to work with." />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230C0D10'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23F2EFE7' stroke-width='1.4' opacity='.5'/%3E%3Ccircle cx='16' cy='16' r='3.5' fill='%23F2EFE7'/%3E%3Ccircle cx='27' cy='16' r='2' fill='%23FF6A3D'/%3E%3C/svg%3E" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Onest:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="styles/main.css" />
+  <link rel="stylesheet" href="styles/components.css" />
+  <link rel="stylesheet" href="styles/code.css" />
+
+  <script>
+    // Theme bootstrap — runs before paint to avoid flash
+    (function () {
+      const stored = localStorage.getItem('rmq-theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = stored || (prefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="topbar" role="banner">
+    <div class="topbar__inner">
+      <a class="brand" href="#/" aria-label="RunMQ home">
+        <span class="brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" width="22" height="22">
+            <circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".3"/>
+            <circle cx="16" cy="16" r="9" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".6"/>
+            <circle cx="16" cy="16" r="3.5" fill="currentColor"/>
+            <circle cx="29" cy="16" r="2" fill="var(--accent)"/>
+          </svg>
+        </span>
+        <span class="brand__name">RunMQ</span>
+        <span class="brand__tag">docs</span>
+      </a>
+
+      <nav class="topbar__nav" aria-label="Primary">
+        <a href="#/getting-started">Get started</a>
+        <a href="#/patterns">Patterns</a>
+        <a href="#/nestjs">NestJS</a>
+        <a href="#/benchmarks">Benchmarks</a>
+        <a href="#/api">API</a>
+      </nav>
+
+      <div class="topbar__actions">
+        <button id="theme-toggle" class="icon-btn" type="button" aria-label="Toggle theme">
+          <svg class="theme-icon theme-icon--sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+          </svg>
+          <svg class="theme-icon theme-icon--moon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+        <a class="icon-btn" href="https://github.com/runmq/queue" target="_blank" rel="noopener" aria-label="GitHub repository">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+            <path d="M12 .5C5.65.5.5 5.65.5 12a11.5 11.5 0 0 0 7.86 10.92c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.36-3.88-1.36-.52-1.32-1.27-1.67-1.27-1.67-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.76 2.69 1.25 3.34.96.1-.74.4-1.25.72-1.54-2.55-.29-5.24-1.27-5.24-5.66 0-1.25.45-2.27 1.18-3.07-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.16 1.18a10.94 10.94 0 0 1 5.74 0c2.2-1.49 3.16-1.18 3.16-1.18.62 1.58.23 2.75.11 3.04.74.8 1.18 1.82 1.18 3.07 0 4.4-2.7 5.36-5.27 5.65.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/>
+          </svg>
+        </a>
+        <button id="sidebar-toggle" class="icon-btn icon-btn--mobile" type="button" aria-label="Toggle navigation">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+            <path d="M4 7h16M4 12h16M4 17h16"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside id="sidebar" class="sidebar" aria-label="Documentation sections">
+      <nav class="sidebar__nav">
+        <!-- Sidebar is populated from scripts/nav.js — extend it there -->
+      </nav>
+      <div class="sidebar__footer">
+        <span class="kbd">⌘ K</span>
+        <span class="sidebar__hint">soon — search</span>
+      </div>
+    </aside>
+
+    <main id="main" class="main" tabindex="-1">
+      <article id="article" class="article">
+        <!-- Content is injected here by the router -->
+        <div class="article__loading" aria-live="polite">Loading…</div>
+      </article>
+
+      <aside id="toc" class="toc" aria-label="On this page">
+        <p class="toc__title">On this page</p>
+        <ol class="toc__list"></ol>
+      </aside>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <div class="site-footer__col">
+        <p class="site-footer__brand">RunMQ</p>
+        <p class="site-footer__line">High-performance message queue for Node.js, built on RabbitMQ.</p>
+      </div>
+      <div class="site-footer__col">
+        <p class="site-footer__heading">Packages</p>
+        <a href="https://www.npmjs.com/package/runmq" target="_blank" rel="noopener">runmq</a>
+        <a href="https://www.npmjs.com/package/nestjs-runmq" target="_blank" rel="noopener">nestjs-runmq</a>
+        <a href="https://github.com/runmq/pulse" target="_blank" rel="noopener">RunMQ Pulse</a>
+      </div>
+      <div class="site-footer__col">
+        <p class="site-footer__heading">Project</p>
+        <a href="https://github.com/runmq/queue" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/runmq/queue/blob/main/CHANGELOG.md" target="_blank" rel="noopener">Changelog</a>
+        <a href="https://github.com/runmq/queue/blob/main/LICENSE" target="_blank" rel="noopener">License (MIT)</a>
+      </div>
+      <div class="site-footer__col site-footer__col--right">
+        <p class="site-footer__line">Built with care. Static HTML, CSS, and JS.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module" src="scripts/nav.js"></script>
+  <script type="module" src="scripts/app.js"></script>
+</body>
+</html>

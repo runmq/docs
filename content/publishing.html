@@ -1,0 +1,73 @@
+<div class="eyebrow">Core · Publishing</div>
+<h1>Publishing <em>messages</em>.</h1>
+<p class="lead">
+  Publishing is intentionally minimal — pick a topic, hand it a payload, and RunMQ takes care of routing, durability, and delivery.
+</p>
+
+<h2>The publish API</h2>
+
+<pre><code data-lang="ts">mq.publish(topic: string, message: Record&lt;string, any&gt;, correlationId?: string): void;</code></pre>
+
+<ul>
+  <li><strong><code>topic</code></strong> — the topic you're publishing to. Every processor subscribed to this topic receives the message.</li>
+  <li><strong><code>message</code></strong> — your payload. Make sure it satisfies any schemas the consumers expect.</li>
+  <li><strong><code>correlationId</code></strong> — optional. Useful for tracing a message across services.</li>
+</ul>
+
+<h2>Examples</h2>
+
+<pre><code data-lang="ts">// Simple publish
+mq.publish('user.created', {
+  userId: 'u_123',
+  email: 'user@example.com',
+  name: 'John Doe',
+});
+
+// With a correlation id for distributed tracing
+mq.publish('order.placed', orderPayload, requestContext.traceId);</code></pre>
+
+<h2>Atomic fan-out</h2>
+<p>
+  You publish once. RabbitMQ delivers a copy to every subscribed processor's queue, atomically. There is no application-level
+  fan-out and no risk of "delivered to A but not B".
+</p>
+
+<div class="flow">mq.publish('user.created', {...})
+              │
+              ▼
+       Topic exchange (<b>user.created</b>)
+              ├──► Queue: emailService
+              ├──► Queue: analyticsService
+              └──► Queue: notificationService</div>
+
+<h2>Publish ordering &amp; durability</h2>
+<ul>
+  <li>Messages are published as <strong>persistent</strong> — they survive RabbitMQ restarts.</li>
+  <li>Within a single channel, ordering is preserved.</li>
+  <li>Across consumers, ordering depends on prefetch + concurrency. Use <code>consumersCount: 1</code> if strict ordering matters per processor.</li>
+</ul>
+
+<h2>Common mistakes</h2>
+
+<div class="callout callout--warn">
+  <strong>Don't publish before <code>RunMQ.start()</code> resolves.</strong> Publish calls before the connection is ready will throw <code>Error('RunMQ is not connected')</code>. Wait for start, then publish from request handlers or jobs.
+</div>
+
+<div class="callout callout--info">
+  <strong>No processor? No subscriber.</strong> A topic with no processor means messages have nowhere to go. RunMQ does not buffer them in your app — they're routed by RabbitMQ and dropped if no queue is bound.
+</div>
+
+<h2>Tracing with correlation IDs</h2>
+<p>
+  Pass a correlation ID at publish time and RunMQ surfaces it on the consumer side via <code>message.meta.correlationId</code>.
+  Wire it through your logger and you've got end-to-end tracing for free.
+</p>
+
+<pre><code data-lang="ts">// Publisher
+mq.publish('email.send', { to, subject, body }, ctx.traceId);
+
+// Consumer
+await mq.process('email.send', { name: 'emailWorker', attempts: 3 }, async (msg) => {
+  logger.info({ traceId: msg.meta.correlationId }, 'sending email');
+  await transport.send(msg.message);
+});</code></pre>

@@ -1,0 +1,98 @@
+<div class="eyebrow">Reference · API</div>
+<h1>API <em>reference</em>.</h1>
+<p class="lead">
+  The full type surface for the <code>runmq</code> core package. The NestJS module re-exports the same types under <code>nestjs-runmq</code>.
+</p>
+
+<h2>Connection configuration</h2>
+<table class="props">
+  <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td class="prop-name">url</td><td><code>string</code></td><td class="prop-default">—</td><td>The URL of the RabbitMQ server.</td></tr>
+    <tr><td class="prop-name">reconnectDelay</td><td><code>number</code></td><td class="prop-default">5000</td><td>Delay (ms) before attempting to reconnect after a disconnection.</td></tr>
+    <tr><td class="prop-name">maxReconnectAttempts</td><td><code>number</code></td><td class="prop-default">5</td><td>Maximum number of reconnection attempts.</td></tr>
+    <tr><td class="prop-name">management</td><td><code>ManagementConfiguration</code></td><td class="prop-default">—</td><td>RabbitMQ management API configuration.</td></tr>
+  </tbody>
+</table>
+
+<h2>Management configuration</h2>
+<table class="props">
+  <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td class="prop-name">url</td><td><code>string</code></td><td class="prop-default">—</td><td>The URL of the RabbitMQ management API.</td></tr>
+    <tr><td class="prop-name">username</td><td><code>string</code></td><td class="prop-default">—</td><td>Username for management API authentication.</td></tr>
+    <tr><td class="prop-name">password</td><td><code>string</code></td><td class="prop-default">—</td><td>Password for management API authentication.</td></tr>
+  </tbody>
+</table>
+
+<h2>Processor configuration</h2>
+<table class="props">
+  <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td class="prop-name">name</td><td><code>string</code></td><td class="prop-default">—</td><td>Unique name of the processor, used to create isolated queues.</td></tr>
+    <tr><td class="prop-name">consumersCount</td><td><code>number</code></td><td class="prop-default">—</td><td>Number of concurrent consumers for this processor.</td></tr>
+    <tr><td class="prop-name">attempts</td><td><code>number</code></td><td class="prop-default">1</td><td>Maximum attempts to process a message.</td></tr>
+    <tr><td class="prop-name">attemptsDelay</td><td><code>number</code></td><td class="prop-default">1000</td><td>Delay (ms) between attempts.</td></tr>
+    <tr><td class="prop-name">messageSchema</td><td><code>MessageSchema</code></td><td class="prop-default">—</td><td>Optional schema configuration for message validation.</td></tr>
+    <tr><td class="prop-name">usePoliciesForDelay</td><td><code>boolean</code></td><td class="prop-default">false</td><td>Use RabbitMQ policies for retry delay TTL. Recommended.</td></tr>
+  </tbody>
+</table>
+
+<h2>Message schema configuration</h2>
+<table class="props">
+  <thead><tr><th>Property</th><th>Type</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td class="prop-name">type</td><td><code>'ajv'</code></td><td>Type of schema used for validation (only AJV today).</td></tr>
+    <tr><td class="prop-name">schema</td><td><code>any</code></td><td>Schema definition for validating messages.</td></tr>
+    <tr><td class="prop-name">failureStrategy</td><td><code>'dlq'</code></td><td>What to do when validation fails.</td></tr>
+  </tbody>
+</table>
+
+<h2>Message structure</h2>
+<table class="props">
+  <thead><tr><th>Property</th><th>Type</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td class="prop-name">message</td><td><code>T</code></td><td>Your message payload.</td></tr>
+    <tr><td class="prop-name">meta.id</td><td><code>string</code></td><td>Unique identifier of the message.</td></tr>
+    <tr><td class="prop-name">meta.publishedAt</td><td><code>number</code></td><td>Timestamp (ms) when the message was published.</td></tr>
+    <tr><td class="prop-name">meta.correlationId</td><td><code>string</code></td><td>Correlation identifier for tracing.</td></tr>
+  </tbody>
+</table>
+
+<h2>RunMQ instance</h2>
+<table class="props">
+  <thead><tr><th>Method</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td class="prop-name">RunMQ.start(config, logger?)</td><td>Async factory. Resolves once the AMQP connection is open.</td></tr>
+    <tr><td class="prop-name">mq.process(topic, config, handler)</td><td>Declare a processor (queue + DLQ) and start consuming.</td></tr>
+    <tr><td class="prop-name">mq.publish(topic, message, correlationId?)</td><td>Publish a message to a topic. Synchronous.</td></tr>
+    <tr><td class="prop-name">mq.isActive()</td><td>Returns <code>true</code> when the underlying AMQP channel is open.</td></tr>
+    <tr><td class="prop-name">mq.stop()</td><td>Drain in-flight handlers and close the AMQP connection.</td></tr>
+  </tbody>
+</table>
+
+<h2>NestJS exports</h2>
+<pre><code data-lang="ts">import {
+  // Module
+  RunMQModule,
+
+  // Decorators
+  Processor,
+  ProcessMessage,
+  InjectRunMQ,
+
+  // Services
+  RunMQPublisherService,
+
+  // Types (re-exported from runmq)
+  RunMQMessageContent,
+  RunMQMessageMetaContent,
+  RunMQConnectionConfig,
+  RunMQProcessorConfiguration,
+  MessageSchema,
+  SchemaType,
+  SchemaFailureStrategy,
+  RabbitMQManagementConfig,
+  RunMQLogger,
+  RunMQ,
+} from 'nestjs-runmq';</code></pre>

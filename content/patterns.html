@@ -1,0 +1,123 @@
+<div class="eyebrow">Patterns</div>
+<h1>Patterns RunMQ <em>fits naturally</em>.</h1>
+<p class="lead">
+  Two patterns cover the vast majority of use cases. They use the same primitives — RunMQ just lets you grow from one to the
+  other without a migration.
+</p>
+
+<h2>1. Event-Driven Architecture (Event Bus)</h2>
+<p>Multiple services react to the same event independently. Each one owns its queue and its DLQ — full isolation, full autonomy.</p>
+
+<div class="flow">Publisher → Topic (<b>user.created</b>)
+              ├→ Queue: <b>emailService</b>        → DLQ: emailService_dlq
+              ├→ Queue: <b>analyticsService</b>    → DLQ: analyticsService_dlq
+              └→ Queue: <b>notificationService</b> → DLQ: notificationService_dlq</div>
+
+<p>Why teams reach for this pattern:</p>
+<ul>
+  <li>One publish reaches every interested service — no fan-out logic in your app.</li>
+  <li>Each service tunes its own retries, concurrency, and delays.</li>
+  <li>Adding a new service is just subscribing to an existing topic — no upstream changes.</li>
+  <li>A failing consumer doesn't drag the others down; bad messages land in <em>its</em> DLQ.</li>
+  <li>Schema validation can stop invalid payloads before they reach your handlers.</li>
+</ul>
+
+<h3>Example</h3>
+
+<pre><code data-lang="ts">import { RunMQ } from 'runmq';
+
+const mq = await RunMQ.start({ url: 'amqp://localhost:5672' });
+
+// Email — short retries, low concurrency
+await mq.process('user.created', {
+  name: 'emailService',
+  consumersCount: 2,
+  attempts: 3,
+  attemptsDelay: 2_000,
+}, async (msg) => sendWelcomeEmail(msg.message));
+
+// Analytics — many retries, fire-and-forget OK if it falls behind
+await mq.process('user.created', {
+  name: 'analyticsService',
+  consumersCount: 4,
+  attempts: 10,
+  attemptsDelay: 5_000,
+}, async (msg) => track('user_created', msg.message));
+
+// Notifications — strict schema, every message is critical
+await mq.process('user.created', {
+  name: 'notificationService',
+  consumersCount: 2,
+  attempts: 5,
+  attemptsDelay: 1_000,
+  messageSchema: {
+    type: 'ajv',
+    failureStrategy: 'dlq',
+    schema: { /* ... */ },
+  },
+}, async (msg) => pushNotification(msg.message));
+
+mq.publish('user.created', { userId: 'u_123', email: 'a@b.com' });</code></pre>
+
+<h2>2. Background Processing</h2>
+<p>A worker drains jobs from a dedicated queue, with retries and a DLQ for the ones that fail.</p>
+
+<div class="flow">Publisher → Topic (<b>email.send</b>) → Queue: <b>emailWorker</b> → DLQ: emailWorker_dlq</div>
+
+<p>Why this works well:</p>
+<ul>
+  <li>Run multiple workers in parallel for high throughput.</li>
+  <li>Failures are captured in the DLQ where you can inspect or replay them.</li>
+  <li>Schema validation keeps malformed jobs from breaking your worker.</li>
+  <li>If your needs grow, this pattern transforms into an Event Bus by simply adding more processors to the same topic — no migration required.</li>
+</ul>
+
+<pre><code data-lang="ts">await mq.process('email.send', {
+  name: 'emailWorker',
+  consumersCount: 8,           // scale vertically inside one process
+  attempts: 5,
+  attemptsDelay: 30_000,
+  usePoliciesForDelay: true,   // tune later without re-declaring queues
+}, async (job) => {
+  await transport.send(job.message.to, job.message.subject, job.message.body);
+});
+
+// Anywhere in your app:
+mq.publish('email.send', {
+  to: 'customer@example.com',
+  subject: 'Welcome',
+  body: '...',
+});</code></pre>
+
+<h2>Choosing between them</h2>
+
+<table class="props">
+  <thead>
+    <tr><th>If you…</th><th>Reach for</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>have <strong>one job type</strong> handled by one logical worker</td>
+      <td>Background processing</td>
+    </tr>
+    <tr>
+      <td>have <strong>multiple services</strong> each reacting to the same event</td>
+      <td>Event Bus</td>
+    </tr>
+    <tr>
+      <td>aren't sure yet</td>
+      <td>Start with background processing — promote later by adding processors</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="pullquote">
+  Both patterns share the same primitives. The only thing that changes between them is how many processors subscribe to the topic.
+</div>
+
+<h2>Mixing strategies per processor</h2>
+<p>
+  Because each processor has its own queue, retry policy, and concurrency, you can mix strategies on a single topic. For example,
+  the <em>email</em> consumer might retry quickly for 5 minutes, while the <em>archive</em> consumer retries patiently over an
+  hour. Both subscribe to the same event; neither blocks the other.
+</p>

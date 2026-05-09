@@ -1,0 +1,125 @@
+/* =========================================================
+   Code blocks + minimal syntax tokens
+   ========================================================= */
+
+.article p > code,
+.article li > code,
+.article td > code,
+.callout code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  padding: 2px 6px;
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 5px;
+  color: var(--accent-text);
+  white-space: nowrap;
+}
+
+.code {
+  position: relative;
+  margin: 18px 0 24px;
+  border: 1px solid var(--code-border);
+  border-radius: var(--radius);
+  background: var(--code-bg);
+  overflow: hidden;
+}
+
+.code__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--code-border);
+  background: color-mix(in oklab, var(--code-bg) 70%, var(--bg-soft));
+}
+
+.code__lang {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.code__lang::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--accent);
+  display: inline-block;
+}
+
+.code__copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  color: var(--text-3);
+  border: 1px solid transparent;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.code__copy:hover {
+  color: var(--text);
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+.code__copy[data-copied='true'] {
+  color: var(--accent);
+}
+
+.code pre {
+  margin: 0;
+  padding: 16px 18px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--text);
+  scrollbar-width: thin;
+}
+
+.code code { font-family: inherit; }
+
+/* Tab variant — code block inside tab panels has flush head/foot */
+.tabs__panel .code {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+}
+
+.tabs__panel .code__head {
+  background: transparent;
+  border-bottom: 1px solid var(--code-border);
+}
+
+/* Tokens for our tiny highlighter */
+.tok-k { color: #c0398b; }   /* keyword */
+.tok-s { color: #3a7d44; }   /* string */
+.tok-n { color: #a96000; }   /* number */
+.tok-c { color: var(--text-3); font-style: italic; }  /* comment */
+.tok-f { color: #1d6fa6; }   /* function */
+.tok-t { color: #6f42c1; }   /* type */
+.tok-p { color: var(--text-2); } /* punctuation */
+.tok-d { color: var(--accent); font-weight: 500; }    /* decorator */
+.tok-id { color: var(--text); }
+
+:root[data-theme='dark'] .tok-k { color: #ff7ab2; }
+:root[data-theme='dark'] .tok-s { color: #91d39a; }
+:root[data-theme='dark'] .tok-n { color: #ffb27a; }
+:root[data-theme='dark'] .tok-f { color: #6cb8ff; }
+:root[data-theme='dark'] .tok-t { color: #c694ff; }
+
+/* Inline copy hint when block has no head */
+.code--bare pre { padding-top: 22px; }

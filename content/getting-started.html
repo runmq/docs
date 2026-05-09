@@ -1,0 +1,108 @@
+<div class="eyebrow">Quick start</div>
+<h1>Up and running in <em>five minutes</em>.</h1>
+<p class="lead">
+  Install the package, connect to RabbitMQ, declare a processor, publish a message. That's the whole loop. Everything else
+  in these docs is about tuning — not getting started.
+</p>
+
+<h2>Prerequisites</h2>
+<ul>
+  <li>Node.js 18+</li>
+  <li>A RabbitMQ instance — local Docker, managed cloud, or otherwise.</li>
+  <li>The RabbitMQ management plugin enabled (recommended — unlocks dynamic retry tuning).</li>
+</ul>
+
+<div class="callout callout--info">
+  Don't have RabbitMQ handy? Spin one up with management UI in a single command:
+  <pre><code data-lang="bash">docker run -d --name rabbit -p 5672:5672 -p 15672:15672 rabbitmq:3-management</code></pre>
+  Then visit <code>http://localhost:15672</code> (login: <code>guest</code> / <code>guest</code>).
+</div>
+
+<h2>Install</h2>
+<pre><code data-lang="bash">npm install runmq</code></pre>
+
+<h2>Connect</h2>
+<p>Open a connection during application startup. <code>RunMQ.start()</code> resolves once the connection is fully ready.</p>
+
+<pre><code data-lang="ts">import { RunMQ } from 'runmq';
+
+const runMQ = await RunMQ.start({
+  url: 'amqp://localhost:5672',
+  reconnectDelay: 5000,        // ms between reconnect attempts (default 5000)
+  maxReconnectAttempts: 5,     // give up after N attempts (default 5)
+  management: {                // optional, but highly recommended
+    url: 'http://localhost:15672',
+    username: 'guest',
+    password: 'guest',
+  },
+});</code></pre>
+
+<div class="callout callout--tip">
+  <strong>Why <code>management</code> matters.</strong> Providing it unlocks <em>policy-based</em> retry delays — meaning you can
+  change <code>attemptsDelay</code> at runtime without re-declaring queues. Without it, RunMQ falls back to queue-based TTL
+  (which works fine, just less flexible).
+</div>
+
+<h2>Set up your processors</h2>
+<p>
+  A small but important detail: <strong>start your processors before you publish.</strong> Queues are created the first time a
+  consumer subscribes — so a processor needs to be up for its queue to exist.
+</p>
+
+<pre><code data-lang="ts">// Processor 1: Email Service
+await runMQ.process('user.created', {
+  name: 'emailService',        // unique → isolated queue + DLQ
+  consumersCount: 2,           // process up to 2 messages concurrently
+  attempts: 3,                 // retry up to 3 times before DLQ
+  attemptsDelay: 2000,         // wait 2s between retries
+  usePoliciesForDelay: true,   // recommended (default: false)
+}, async (message) => {
+  console.log('EmailService received:', message.message);
+  await sendEmail(message.message);
+});
+
+// Processor 2: SMS Service — same topic, separate queue
+await runMQ.process('user.created', {
+  name: 'smsService',
+  consumersCount: 1,
+  attempts: 5,
+  attemptsDelay: 1000,
+  usePoliciesForDelay: true,
+}, async (message) => {
+  console.log('SMSService received:', message.message);
+  await sendSMS(message.message);
+});</code></pre>
+
+<p>What's happening here:</p>
+<ul>
+  <li><strong><code>name</code></strong> uniquely identifies the processor and gives it a dedicated queue + DLQ.</li>
+  <li><strong>Pub/Sub is built in</strong> — both processors subscribe to <code>user.created</code> and each receive every message. One sends an email, the other sends an SMS, and they don't interfere.</li>
+  <li>Every processor gets its <strong>own retry policy, concurrency level, and delay configuration</strong>. Tune them per workload.</li>
+  <li>With <code>management</code> configured, you can change <code>attemptsDelay</code> later without re-declaring queues.</li>
+</ul>
+
+<h2>Publish a message</h2>
+
+<pre><code data-lang="ts">runMQ.publish('user.created', {
+  userId: '123',
+  email: 'user@example.com',
+  name: 'John Doe',
+});</code></pre>
+
+<p>One publish, every subscribed processor receives the message — independently and atomically.</p>
+
+<h2>What you've built</h2>
+
+<div class="flow">Publisher → Topic (<b>user.created</b>)
+              ├→ Queue: <b>emailService</b>     → DLQ: emailService_dlq
+              └→ Queue: <b>smsService</b>       → DLQ: smsService_dlq</div>
+
+<p>
+  Both processors are running. Each owns its queue and DLQ. If <code>emailService</code> throws, RunMQ retries it according to
+  its own policy and (if exhausted) parks the message in <code>emailService_dlq</code> — without affecting <code>smsService</code>
+  in any way.
+</p>
+
+<div class="callout callout--tip">
+  Want this in NestJS? See <a href="#/nestjs">the NestJS guide</a> — same model, with decorators and an injectable publisher.
+</div>

@@ -1,0 +1,118 @@
+<div class="eyebrow">NestJS · Getting started</div>
+<h1>The official <em>NestJS module</em>.</h1>
+<p class="lead">
+  <code>nestjs-runmq</code> gives you the full power of RunMQ with the NestJS DX you'd expect: decorator-based processors,
+  an injectable publisher, automatic discovery, and a lifecycle wired into your app.
+</p>
+
+<h2>Install</h2>
+<pre><code data-lang="bash">npm install nestjs-runmq runmq</code></pre>
+
+<h2>Register the module</h2>
+
+<pre><code data-lang="ts">// app.module.ts
+import { Module } from '@nestjs/common';
+import { RunMQModule } from 'nestjs-runmq';
+
+@Module({
+  imports: [
+    RunMQModule.forRoot({
+      url: 'amqp://guest:guest@localhost:5672',
+      management: {
+        url: 'http://localhost:15672',
+        username: 'guest',
+        password: 'guest',
+      },
+    }),
+  ],
+})
+export class AppModule {}</code></pre>
+
+<p>
+  <code>RunMQModule</code> is <strong>global</strong> — register it once and you can inject the publisher (or processors) anywhere.
+  The connection is opened during bootstrap and closed gracefully on shutdown, so you don't need to manage it yourself.
+</p>
+
+<h2>Define a processor</h2>
+<p>
+  A processor is just a regular <code>@Injectable()</code> class with two decorators on top: <code>@Processor()</code> to describe
+  the queue, and <code>@ProcessMessage()</code> to mark the handler.
+</p>
+
+<pre><code data-lang="ts">// email.processor.ts
+import { Injectable } from '@nestjs/common';
+import { Processor, ProcessMessage, RunMQMessageContent } from 'nestjs-runmq';
+
+@Processor({
+  topic: 'user.created',
+  name: 'emailService',
+  consumersCount: 2,
+  attempts: 3,
+  attemptsDelay: 2000,
+  usePoliciesForDelay: true,
+})
+@Injectable()
+export class EmailProcessor {
+  @ProcessMessage()
+  async handle(message: RunMQMessageContent&lt;{ email: string; name: string }&gt;) {
+    await sendWelcomeEmail(message.message.email, message.message.name);
+  }
+}</code></pre>
+
+<p>Register it as a provider in any module:</p>
+
+<pre><code data-lang="ts">@Module({ providers: [EmailProcessor] })
+export class EmailModule {}</code></pre>
+
+<p>
+  That's it. On startup, the explorer scans your providers, finds every <code>@Processor()</code>, and registers it with RunMQ.
+  No manual wiring, no <code>forFeature()</code> boilerplate.
+</p>
+
+<h2>Publish from anywhere</h2>
+
+<pre><code data-lang="ts">import { Injectable } from '@nestjs/common';
+import { RunMQPublisherService } from 'nestjs-runmq';
+
+@Injectable()
+export class UserService {
+  constructor(private readonly publisher: RunMQPublisherService) {}
+
+  async createUser(email: string, name: string) {
+    // ...persist user
+    this.publisher.publish('user.created', { email, name });
+  }
+}</code></pre>
+
+<h2>Logging — already wired</h2>
+<p>
+  <code>nestjs-runmq</code> automatically pipes RunMQ's internal logs through NestJS's built-in <code>Logger</code> under the
+  <code>RunMQ</code> context. Anything you've configured globally (custom log levels, JSON formatting via
+  <code>nestjs-pino</code>, log shipping, etc.) automatically applies to RunMQ output too. No extra adapter needed.
+</p>
+
+<pre><code data-lang="bash">[Nest] 12345  - RunMQ                    LOG Connected to amqp://localhost:5672
+[Nest] 12345  - RunMQ                    LOG Processor "emailService" listening on user.created</code></pre>
+
+<h2>Accessing the raw RunMQ instance</h2>
+<p>
+  For advanced use cases — health checks, custom diagnostics, or features not yet exposed by this module — inject the
+  underlying <code>RunMQ</code> client directly:
+</p>
+
+<pre><code data-lang="ts">import { Injectable } from '@nestjs/common';
+import { InjectRunMQ } from 'nestjs-runmq';
+import { RunMQ } from 'runmq';
+
+@Injectable()
+export class HealthService {
+  constructor(@InjectRunMQ() private readonly runmq: RunMQ) {}
+
+  rabbitmq() {
+    return { connected: this.runmq.isActive() };
+  }
+}</code></pre>
+
+<div class="callout callout--tip">
+  Need to dive into decorators or async configuration? Continue with <a href="#/nestjs-processors">decorators in depth</a> and <a href="#/nestjs-config">async configuration</a>.
+</div>

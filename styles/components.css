@@ -1,0 +1,531 @@
+/* =========================================================
+   Custom components — extend by copying any of these.
+   ========================================================= */
+
+/* ───── Hero ───── */
+.hero {
+  position: relative;
+  padding: 32px 0 56px;
+  margin-bottom: 24px;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: -40px -40px auto -40px;
+  height: 360px;
+  background:
+    radial-gradient(420px 220px at 12% 10%, color-mix(in oklab, var(--accent) 18%, transparent), transparent 70%),
+    radial-gradient(380px 180px at 90% 0%, color-mix(in oklab, var(--accent) 9%, transparent), transparent 70%);
+  pointer-events: none;
+  z-index: -1;
+  filter: blur(2px);
+}
+
+.hero h1 {
+  font-size: clamp(2.4rem, 1.4rem + 3vw, 3.6rem);
+  margin: 0;
+  letter-spacing: -0.028em;
+}
+
+.hero__lead {
+  font-size: 19px;
+  line-height: 1.55;
+  color: var(--text-2);
+  max-width: 60ch;
+  margin: 18px 0 28px;
+}
+
+.hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition);
+  font-family: var(--font-body);
+  letter-spacing: -0.005em;
+  border-bottom: none !important;
+}
+
+.btn--primary {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+.btn--primary:hover {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+.btn--ghost:hover {
+  background: var(--surface);
+  border-color: var(--text-2);
+  color: var(--text);
+}
+
+.btn--mono {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text-2);
+}
+.btn--mono:hover {
+  color: var(--text);
+  border-color: var(--text-3);
+}
+
+.btn .arrow {
+  transition: transform var(--transition);
+}
+.btn:hover .arrow { transform: translateX(2px); }
+
+/* ───── Stat strip ───── */
+.stat-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin: 36px 0 48px;
+  overflow: hidden;
+}
+
+.stat {
+  background: var(--surface);
+  padding: 18px 20px;
+}
+
+.stat__value {
+  font-family: var(--font-display);
+  font-size: 28px;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  font-weight: 500;
+  line-height: 1;
+}
+
+.stat__value em {
+  font-style: italic;
+  color: var(--accent);
+  font-weight: 400;
+}
+
+.stat__label {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-top: 8px;
+}
+
+@media (max-width: 720px) {
+  .stat-strip { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ───── Feature grid ───── */
+.features {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  margin: 16px 0 36px;
+}
+
+.feature {
+  padding: 20px 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  transition: all var(--transition);
+  position: relative;
+}
+
+.feature:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+
+.feature__icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.feature h3 {
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 4px;
+  letter-spacing: -0.005em;
+}
+
+.feature p {
+  font-size: 14px;
+  color: var(--text-2);
+  line-height: 1.55;
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  .features { grid-template-columns: 1fr; }
+}
+
+/* ───── Callout ───── */
+.callout {
+  display: flex;
+  gap: 14px;
+  padding: 16px 18px;
+  margin: 22px 0;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 14.5px;
+  line-height: 1.6;
+  position: relative;
+}
+
+.callout > .callout__icon {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 1px;
+}
+
+.callout > .callout__body { flex: 1; min-width: 0; }
+.callout > .callout__body > :first-child { margin-top: 0; }
+.callout > .callout__body > :last-child { margin-bottom: 0; }
+
+.callout--tip {
+  background: color-mix(in oklab, var(--accent) 5%, var(--surface));
+  border-color: color-mix(in oklab, var(--accent) 20%, var(--border));
+}
+.callout--tip .callout__icon { background: var(--accent-soft); color: var(--accent); }
+
+.callout--info { background: var(--surface); }
+.callout--info .callout__icon { background: var(--bg-soft); color: var(--text-2); }
+
+.callout--warn {
+  background: color-mix(in oklab, #d8a300 7%, var(--surface));
+  border-color: color-mix(in oklab, #d8a300 30%, var(--border));
+}
+.callout--warn .callout__icon { background: color-mix(in oklab, #d8a300 18%, transparent); color: #a47800; }
+
+:root[data-theme='dark'] .callout--warn .callout__icon { color: #f3c64d; }
+
+/* ───── Tabs ───── */
+.tabs {
+  margin: 22px 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.tabs__list {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  background: var(--bg-soft);
+  border-bottom: 1px solid var(--border);
+}
+
+.tabs__btn {
+  flex: 0 0 auto;
+  padding: 7px 14px;
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--font-body);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all var(--transition);
+  letter-spacing: -0.005em;
+}
+
+.tabs__btn:hover { color: var(--text); }
+
+.tabs__btn[aria-selected='true'] {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+
+.tabs__panel { display: none; padding: 0; }
+.tabs__panel[data-active] { display: block; }
+
+.tabs__panel pre {
+  margin: 0;
+  border-radius: 0;
+  border: none;
+}
+
+/* ───── Property tables ───── */
+.props {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  margin: 18px 0 28px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  display: table;
+}
+
+.props th,
+.props td {
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.props thead th {
+  background: var(--bg-soft);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  font-weight: 500;
+}
+
+.props tbody tr:last-child td { border-bottom: none; }
+
+.props code {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  padding: 2px 6px;
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 5px;
+  color: var(--accent-text);
+  white-space: nowrap;
+}
+
+.props .prop-name {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.props .prop-default {
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+/* ───── Pattern flow diagram ───── */
+.flow {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: var(--radius);
+  padding: 18px 22px;
+  margin: 18px 0 24px;
+  color: var(--text-2);
+  line-height: 1.7;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.flow b {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+/* ───── Pill ───── */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--text-2);
+}
+
+.pill--accent {
+  background: var(--accent-soft);
+  border-color: color-mix(in oklab, var(--accent) 30%, transparent);
+  color: var(--accent-text);
+}
+
+/* ───── Pager ───── */
+.pager {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 56px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+
+.pager a {
+  display: block;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  border-bottom-width: 1px !important;
+  transition: all var(--transition);
+}
+
+.pager a:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.pager__label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 4px;
+}
+
+.pager__title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.pager__next { text-align: right; }
+
+@media (max-width: 720px) {
+  .pager { grid-template-columns: 1fr; }
+  .pager__next { text-align: left; }
+}
+
+/* ───── Bench bars ───── */
+.bench {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 18px 20px;
+  margin: 16px 0 22px;
+}
+
+.bench__row {
+  display: grid;
+  grid-template-columns: 150px 1fr 110px;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 0;
+  font-size: 13.5px;
+}
+
+.bench__row + .bench__row {
+  border-top: 1px dashed var(--border);
+}
+
+.bench__label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.bench__bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg-soft);
+  overflow: hidden;
+  position: relative;
+}
+
+.bench__bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+}
+
+.bench__row[data-lib='bullmq'] .bench__bar > span {
+  background: linear-gradient(90deg, color-mix(in oklab, var(--text-3) 60%, transparent), var(--text-3));
+}
+
+.bench__value {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  text-align: right;
+  color: var(--text);
+}
+
+@media (max-width: 720px) {
+  .bench__row { grid-template-columns: 90px 1fr 90px; }
+}
+
+/* ───── Big quote / pull text ───── */
+.pullquote {
+  margin: 28px 0;
+  font-family: var(--font-body);
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.55;
+  letter-spacing: -0.005em;
+  color: var(--text);
+  padding: 4px 0 4px 18px;
+  border-left: 2px solid var(--accent);
+}
+
+/* ───── Section anchor links ───── */
+.heading-anchor {
+  opacity: 0;
+  margin-left: 6px;
+  font-family: var(--font-mono);
+  color: var(--text-3);
+  font-size: 0.7em;
+  font-weight: 400;
+  border: none !important;
+  transition: opacity var(--transition);
+}
+
+.article h2:hover .heading-anchor,
+.article h3:hover .heading-anchor { opacity: 1; }

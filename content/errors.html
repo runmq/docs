@@ -1,0 +1,54 @@
+<div class="eyebrow">Reference · Errors</div>
+<h1>Errors &amp; <em>lifecycle</em>.</h1>
+<p class="lead">
+  RunMQ favors fail-fast. Misconfiguration throws at startup, not in production at the worst possible moment.
+</p>
+
+<h2>Startup errors</h2>
+<table class="props">
+  <thead><tr><th>Scenario</th><th>Behavior</th></tr></thead>
+  <tbody>
+    <tr><td>RabbitMQ unreachable at startup</td><td>Logged via the configured logger, error is re-thrown so bootstrap fails fast.</td></tr>
+    <tr><td><code>publish()</code> before connection is ready</td><td>Throws <code>Error('RunMQ is not connected')</code>.</td></tr>
+    <tr><td>Two processors with the same <code>name</code></td><td>Throws at startup: <code>Duplicate processor name: {name}</code>.</td></tr>
+    <tr><td><code>@Processor</code> class missing <code>@ProcessMessage</code></td><td>Throws at startup: <code>No @ProcessMessage handler found in {ClassName}</code>.</td></tr>
+    <tr><td><code>@Processor</code> class with multiple <code>@ProcessMessage</code> methods</td><td>Throws at startup: <code>Multiple @ProcessMessage handlers in {ClassName}</code>.</td></tr>
+  </tbody>
+</table>
+
+<h2>Runtime errors</h2>
+<ul>
+  <li>A handler that throws is treated as a transient failure and retried up to <code>attempts</code> times.</li>
+  <li>After the final attempt, the message is moved to that processor's DLQ. Other processors on the same topic are unaffected.</li>
+  <li>If a connection drops, in-flight unacked messages are re-delivered after reconnection (RabbitMQ semantics).</li>
+</ul>
+
+<h2>Custom logger interface</h2>
+
+<pre><code data-lang="ts">import { RunMQLogger } from 'runmq';
+
+class CustomLogger implements RunMQLogger {
+  log(message: string): void {
+    // info-level
+  }
+
+  error(message: string, error?: any): void {
+    // error-level
+  }
+}</code></pre>
+
+<p>Pass it to <code>RunMQ.start(config, new CustomLogger())</code>. In NestJS, use NestJS's logger — <code>nestjs-runmq</code> wires it automatically.</p>
+
+<h2>Graceful shutdown</h2>
+<pre><code data-lang="ts">async function shutdown() {
+  server.close();          // stop accepting requests
+  await mq.stop();         // drain handlers, close AMQP
+  process.exit(0);
+}
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);</code></pre>
+
+<div class="callout callout--info">
+  In NestJS, the module hooks into <code>onModuleDestroy</code> automatically. As long as <code>app.enableShutdownHooks()</code> is enabled, you don't need to write the wiring.
+</div>
