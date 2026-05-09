@@ -197,11 +197,22 @@ function openLightbox(src, alt) {
   document.addEventListener('keydown', onKey);
 }
 
+function enhanceTables(root) {
+  root.querySelectorAll('table').forEach((table) => {
+    if (table.parentElement?.classList.contains('table-scroll')) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'table-scroll';
+    table.parentElement.insertBefore(wrap, table);
+    wrap.appendChild(table);
+  });
+}
+
 export function enhanceAll(root) {
   enhanceCodeBlocks(root);
   enhanceTabs(root);
   enhanceCallouts(root);
   enhanceBenchmarks(root);
+  enhanceTables(root);
   enhanceHeadingAnchors(root);
   enhanceScreenshots(root);
 }
