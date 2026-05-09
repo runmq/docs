@@ -33,7 +33,7 @@ function setActiveSidebar(slug) {
   });
   document.querySelectorAll('.topbar__nav a').forEach((a) => {
     const target = a.getAttribute('href').replace('#/', '');
-    const groupRoots = ['getting-started', 'patterns', 'nestjs', 'benchmarks', 'api'];
+    const groupRoots = ['getting-started', 'patterns', 'advanced', 'nestjs', 'benchmarks', 'api'];
     a.classList.toggle('is-active', target === slug || (groupRoots.includes(target) && slug.startsWith(target)));
   });
 }

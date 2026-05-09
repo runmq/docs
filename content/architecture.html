@@ -46,7 +46,7 @@
       <text x="600" y="64" text-anchor="middle" class="topo-sub">durable · DLX → DLR</text>
     </g>
     <line x1="420" y1="50" x2="500" y2="48" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
-    <text x="455" y="40" class="topo-edge">user.created</text>
+    <text x="460" y="40" text-anchor="middle" class="topo-edge">user.created</text>
 
     <g class="topo-queue">
       <rect x="500" y="100" width="200" height="56" rx="10"/>
@@ -54,7 +54,7 @@
       <text x="600" y="144" text-anchor="middle" class="topo-sub">durable · DLX → DLR</text>
     </g>
     <line x1="420" y1="76" x2="500" y2="128" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
-    <text x="455" y="118" class="topo-edge">user.created</text>
+    <text x="460" y="92" text-anchor="middle" class="topo-edge">user.created</text>
 
     <!-- Retry path label -->
     <text x="600" y="180" text-anchor="middle" class="topo-edge">on reject:  basic.nack(requeue=false)</text>
@@ -74,7 +74,7 @@
       <text x="340" y="244" text-anchor="middle" class="topo-sub">TTL = attemptsDelay · DLX → router</text>
     </g>
     <line x1="500" y1="228" x2="460" y2="228" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#arrAccent)"/>
-    <text x="475" y="218" class="topo-edge">smsService</text>
+    <text x="480" y="220" text-anchor="middle" class="topo-edge">smsService</text>
 
     <!-- Re-inject from delay queue back to router (TTL expires → DLX = router → routing key = processor name) -->
     <path d="M 220 228 Q 120 228 120 110 Q 120 50 220 50" fill="none" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#arrAccent)"/>
@@ -87,7 +87,7 @@
       <text x="600" y="334" text-anchor="middle" class="topo-sub">durable · final failures</text>
     </g>
     <line x1="600" y1="256" x2="600" y2="290" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
-    <text x="612" y="276" class="topo-edge">attempts ≥ max</text>
+    <text x="608" y="276" class="topo-edge">attempts ≥ max</text>
 
     <!-- Legend -->
     <g class="topo-legend" transform="translate(20, 380)">

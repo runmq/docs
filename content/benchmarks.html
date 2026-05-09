@@ -81,7 +81,6 @@
   <li><strong>Redis is in-memory; RabbitMQ is disk-backed.</strong> RabbitMQ persists messages by default; Redis doesn't. This favors BullMQ on E2E latency by design.</li>
   <li><strong>Execution ordering is fixed.</strong> RunMQ runs first in every scenario, paying the JIT cold-start cost. This biases <em>against</em> RunMQ.</li>
   <li><strong>1 ms simulated work in concurrent-consumer tests</strong> over-weights per-message overhead. Realistic 10–100 ms work would narrow the gap.</li>
-  <li><strong>RunMQ's internal processor chain.</strong> RunMQ allocates 6 processor objects per message (deserializer, retries checker, acknowledger, etc.) — included in the consume numbers, biasing slightly <em>against</em> RunMQ.</li>
 </ul>
 
 <div class="callout callout--tip">

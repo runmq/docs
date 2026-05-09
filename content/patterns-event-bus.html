@@ -1,0 +1,334 @@
+<div class="eyebrow">Patterns</div>
+<h1>Event bus for <em>event-driven architecture</em>.</h1>
+<p class="lead">
+  Publish a fact once. Many services react to it independently — each with its own queue, retries, and DLQ. The event bus
+  is the backbone of decoupled microservices: services stop calling each other and start <em>reacting to</em> what's
+  happening in the system.
+</p>
+
+<h2>What it is</h2>
+
+<p>
+  An event bus is the publish/subscribe pattern applied at the architecture level. A producer announces something that
+  happened — <em>"a user signed up"</em>, <em>"an order was placed"</em>, <em>"an invoice was paid"</em> — and any number
+  of consumers can subscribe to that fact and do their own work in response. The producer doesn't know who listens. The
+  listeners don't know about each other.
+</p>
+
+<div class="flow">Publisher ─► topic: <b>user.created</b>
+                      ├─► queue: <b>emailService</b>          → DLQ: emailService_dlq
+                      ├─► queue: <b>analyticsService</b>      → DLQ: analyticsService_dlq
+                      └─► queue: <b>notificationService</b>   → DLQ: notificationService_dlq</div>
+
+<p>
+  Critically, this is not application-level fan-out. The <strong>broker copies the message</strong> to every bound queue
+  atomically. There is no in-process loop, no risk of "delivered to A but not B", and no shared state between consumers.
+</p>
+
+<h2>Events vs. commands</h2>
+
+<p>
+  Before going further, it's worth being precise about what an event <em>is</em>. The shape of the message — and the way
+  systems use it — is different from a command (which most synchronous APIs implicitly are):
+</p>
+
+<table class="props">
+  <thead><tr><th></th><th>Command</th><th>Event</th></tr></thead>
+  <tbody>
+    <tr><td>Tense</td><td>Imperative — <code>SendEmail</code></td><td>Past — <code>UserCreated</code></td></tr>
+    <tr><td>Intent</td><td>"Do this"</td><td>"This happened"</td></tr>
+    <tr><td>Recipients</td><td>Exactly one</td><td>Zero or more</td></tr>
+    <tr><td>Producer knows consumer?</td><td>Yes</td><td>No</td></tr>
+    <tr><td>Failure model</td><td>Producer cares about the outcome</td><td>Producer is done; consumers own their outcomes</td></tr>
+  </tbody>
+</table>
+
+<p>
+  Background processing usually carries <em>commands</em> (<code>email.send</code> = "send an email"). An event bus carries
+  <em>events</em> (<code>user.created</code> = "a user was created — react however you like"). The distinction shapes how
+  you name topics and where responsibility lives.
+</p>
+
+<h2>Why it matters in microservices</h2>
+
+<p>
+  Microservices shine when services can change, deploy, and fail independently. The biggest threat to that independence is
+  <strong>synchronous coupling</strong> — service A reaching into service B's API. The more direct calls between services,
+  the more your "microservices" behave like a distributed monolith with extra latency.
+</p>
+
+<p>An event bus replaces synchronous coupling with three properties that microservice teams care about deeply:</p>
+
+<ul>
+  <li>
+    <strong>Temporal decoupling.</strong> Producer and consumers don't have to be online at the same time. The user-service can
+    publish <code>user.created</code> at 3am; the analytics consumer can be down for maintenance and pick up the backlog when
+    it returns. No retries-in-the-request, no 502s on the user signup endpoint.
+  </li>
+  <li>
+    <strong>Spatial decoupling.</strong> The producer doesn't know who consumes its events. Add a new fraud-detection service
+    next quarter and it just subscribes — no PR against the user-service, no version bump, no shared library.
+  </li>
+  <li>
+    <strong>Failure containment.</strong> A bug in the analytics consumer parks bad messages in the analytics DLQ. The email
+    consumer keeps shipping. Compare with synchronous chains, where one slow service degrades every caller upstream.
+  </li>
+</ul>
+
+<div class="callout callout--info">
+  <strong>The architectural payoff:</strong> teams can ship features without coordination. New consumers attach themselves
+  to existing events. Old consumers don't need to know they exist. The wiring lives in the broker, not in your codebase.
+</div>
+
+<h2>Where it shines</h2>
+
+<table class="props">
+  <thead><tr><th>Scenario</th><th>Why an event bus fits</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>User signup with downstream side-effects</td>
+      <td>Welcome email, CRM sync, analytics, notifications — none of which the auth service should know about.</td>
+    </tr>
+    <tr>
+      <td>Order lifecycle (placed → paid → shipped)</td>
+      <td>Inventory, billing, fulfillment, and notifications all react to the same state transitions.</td>
+    </tr>
+    <tr>
+      <td>Audit logging across services</td>
+      <td>One audit consumer subscribes to many events. Adding audit coverage doesn't touch business code.</td>
+    </tr>
+    <tr>
+      <td>Search indexing</td>
+      <td>The search service reacts to write events from many bounded contexts; the writers know nothing about search.</td>
+    </tr>
+    <tr>
+      <td>Cache invalidation</td>
+      <td>Caches subscribe to mutation events. Writers don't carry a list of caches to bust.</td>
+    </tr>
+    <tr>
+      <td>Materialized views / read models (CQRS)</td>
+      <td>Read-side projections rebuild themselves by subscribing to write-side events.</td>
+    </tr>
+    <tr>
+      <td>Saga / process orchestration</td>
+      <td>Long-running workflows advance step by step on event arrivals.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>The minimum viable setup</h2>
+
+<pre><code data-lang="ts">import { RunMQ } from 'runmq';
+
+const mq = await RunMQ.start({ url: 'amqp://localhost:5672' });
+
+// Email — short retries, low concurrency
+await mq.process('user.created', {
+  name: 'emailService',
+  consumersCount: 2,
+  attempts: 3,
+  attemptsDelay: 2_000,
+}, async (msg) => sendWelcomeEmail(msg.message));
+
+// Analytics — many retries, OK to fall behind
+await mq.process('user.created', {
+  name: 'analyticsService',
+  consumersCount: 4,
+  attempts: 10,
+  attemptsDelay: 5_000,
+}, async (msg) => track('user_created', msg.message));
+
+// Notifications — strict schema, every message matters
+await mq.process('user.created', {
+  name: 'notificationService',
+  consumersCount: 2,
+  attempts: 5,
+  attemptsDelay: 1_000,
+  messageSchema: {
+    type: 'ajv',
+    failureStrategy: 'dlq',
+    schema: { /* … */ },
+  },
+}, async (msg) => pushNotification(msg.message));
+
+// Anywhere in the producer service:
+mq.publish('user.created', { userId: 'u_123', email: 'a@b.com' });</code></pre>
+
+<p>
+  Three independent consumers, three independent failure modes, three independent tuning knobs. One publish.
+</p>
+
+<h2>Designing good events</h2>
+
+<p>
+  Events are a public API between services — arguably more public than your HTTP endpoints, because consumers depend on
+  the <em>semantics</em> of what happened, not just the wire format. Treat them with the same care.
+</p>
+
+<h3>Name them in past tense, by domain</h3>
+
+<p>
+  <code>user.created</code>, <code>order.placed</code>, <code>invoice.paid</code>. Not <code>create_user</code>, not
+  <code>send_email</code>. The name is a fact about the world, not a request to do something.
+</p>
+
+<h3>Carry just enough payload</h3>
+
+<p>Two viable patterns, with very different trade-offs:</p>
+
+<table class="props">
+  <thead><tr><th>Style</th><th>Payload</th><th>Trade-off</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Notification event</strong></td>
+      <td>Just identifiers — <code>{ userId: 'u_123' }</code></td>
+      <td>Tiny messages; consumers fetch fresh data. But adds a request back to the producer service — partial coupling.</td>
+    </tr>
+    <tr>
+      <td><strong>Event-carried state transfer</strong></td>
+      <td>The full relevant state — <code>{ userId, email, plan, … }</code></td>
+      <td>Consumers are autonomous; producer can be down. But payloads grow, and stale data is possible if consumers process slowly.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+  In practice, most teams settle on event-carried state transfer with a small, stable subset of fields. Add a <code>schemaVersion</code>
+  early so you can evolve.
+</p>
+
+<h3>Version the schema</h3>
+
+<pre><code data-lang="ts">mq.publish('user.created', {
+  schemaVersion: 1,
+  userId: 'u_123',
+  email: 'a@b.com',
+  plan: 'free',
+});</code></pre>
+
+<p>
+  Adding fields is safe. Renaming or removing fields is a breaking change — bump the version (or publish to a new topic
+  like <code>user.created.v2</code>) and let consumers migrate at their pace.
+</p>
+
+<h2>Tuning per consumer, not per topic</h2>
+
+<p>
+  The point of the event bus is that consumers are independent — and so is their tuning. RunMQ makes this concrete: every
+  processor sets its own concurrency, retry budget, delay, and schema. A single <code>user.created</code> event can flow
+  into:
+</p>
+
+<ul>
+  <li>An <strong>email</strong> consumer with 2 concurrent workers and 3 fast retries (the SMTP relay is usually fine).</li>
+  <li>A <strong>billing</strong> consumer with 1 worker and 10 patient retries (the payment provider has SLAs).</li>
+  <li>An <strong>analytics</strong> consumer with 8 workers and many retries (eventual consistency is fine).</li>
+</ul>
+
+<p>None of those tunings affect the others. None of those failures affect the others.</p>
+
+<h2>Idempotency is non-negotiable</h2>
+
+<p>
+  Every consumer in an event bus must be idempotent. RunMQ retries on failure, RabbitMQ may redeliver if a consumer
+  crashes mid-ack, and the same logical event may reach two replicas of the same consumer. Bake idempotency into the
+  handler:
+</p>
+
+<pre><code data-lang="ts">await mq.process('order.placed', { name: 'inventory', attempts: 5 }, async (msg) => {
+  const { orderId, items } = msg.message;
+  if (await db.inventoryReservations.exists(orderId)) return;       // already reserved
+  await db.inventoryReservations.reserve(orderId, items);
+});</code></pre>
+
+<p>
+  Use a stable key from the event (<code>orderId</code>, an explicit <code>eventId</code>, etc.) and the same database
+  transaction that does the work to record "I handled this". If you can't co-transact, use an outbox or a deduplication
+  store. Don't assume "exactly once".
+</p>
+
+<h2>Operational habits</h2>
+
+<ul>
+  <li>
+    <strong>Name queues by service, not by event.</strong> <code>emailService</code>, not <code>user.created.queue</code>.
+    A service may subscribe to many events; its queue is "stuff this service is processing".
+  </li>
+  <li>
+    <strong>Wire one DLQ per service, per event.</strong> Having a dedicated DLQ for each processor lets you triage failures
+    without mixing concerns. RunMQ does this for you.
+  </li>
+  <li>
+    <strong>Monitor queue depth, not just message rate.</strong> Depth tells you whether consumers are keeping up with
+    producers. A growing queue is a warning before it's an outage.
+  </li>
+  <li>
+    <strong>Treat the broker topology as code.</strong> RunMQ asserts queues, exchanges, and bindings on startup, so the
+    runtime configuration <em>is</em> the source of truth.
+  </li>
+</ul>
+
+<h2>Anti-patterns</h2>
+
+<table class="props">
+  <thead><tr><th>Don't</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Encode commands as events</td>
+      <td><code>send_email_event</code> is a command in disguise — exactly one consumer, the producer cares about the result. Use a background-processing pattern instead.</td>
+    </tr>
+    <tr>
+      <td>Make consumers depend on each other's order</td>
+      <td>Events arrive in roughly the order published, but not strictly. If "order shipped" must follow "order paid", that's a saga, not two unrelated events.</td>
+    </tr>
+    <tr>
+      <td>Fan out in application code</td>
+      <td>If the producer publishes the same event N times to N topics, you've reinvented the broker — badly. Publish once; let bindings do the rest.</td>
+    </tr>
+    <tr>
+      <td>Couple consumers to producer internals</td>
+      <td>An event payload is an API. Don't dump your ORM model directly. Pick a deliberate shape and version it.</td>
+    </tr>
+    <tr>
+      <td>Treat events as logs</td>
+      <td>The bus is for reacting, not auditing. If you want a permanent record, persist it in a dedicated store (often via an audit consumer).</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Choreography vs. orchestration</h2>
+
+<p>
+  An event bus naturally favors <strong>choreography</strong> — each service reacts to events on its own. That's powerful,
+  but for multi-step workflows (place order → reserve inventory → charge card → notify warehouse), pure choreography can
+  scatter the logic across services and make debugging painful.
+</p>
+
+<p>
+  When a workflow has clear steps and compensating actions on failure, model it as an explicit <em>saga</em> — a
+  coordinator service that listens for step-completed events and publishes the next command. The coordinator owns the
+  state machine; the participants stay simple. RunMQ's primitives support either style; the choice is architectural, not
+  technical.
+</p>
+
+<h2>Coming from background processing</h2>
+
+<p>
+  If you started with the <a href="#/patterns-background">background processing</a> pattern, growing into an event bus
+  costs you nothing. Add a second processor with a different name to the same topic, and you've crossed the line:
+</p>
+
+<pre><code data-lang="ts">// You already had this:
+await mq.process('order.placed', { name: 'fulfillment', attempts: 5 }, fulfill);
+
+// Adding analytics doesn't touch the fulfillment service:
+await mq.process('order.placed', { name: 'analytics',  attempts: 10 }, track);</code></pre>
+
+<p>
+  No migration. No coordination. No new infrastructure. The same publish now reaches two independent consumers — and the
+  next team that wants in just adds a third.
+</p>
+
+<div class="pullquote">
+  An event bus isn't a feature you turn on — it's the architecture that emerges when you let services react to facts instead of calling each other.
+</div>

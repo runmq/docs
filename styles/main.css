@@ -446,11 +446,11 @@ button {
 .article li { margin: 4px 0; }
 .article li::marker { color: var(--text-3); }
 
-.article a {
+.article a:not(.btn) {
   color: var(--accent);
   border-bottom: 1px solid color-mix(in oklab, var(--accent) 35%, transparent);
 }
-.article a:hover {
+.article a:not(.btn):hover {
   border-bottom-color: var(--accent);
 }
 

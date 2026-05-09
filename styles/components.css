@@ -56,7 +56,6 @@
   transition: all var(--transition);
   font-family: var(--font-body);
   letter-spacing: -0.005em;
-  border-bottom: none !important;
 }
 
 .btn--primary {

@@ -13,7 +13,14 @@ export const NAV = [
     items: [
       { slug: 'home', title: 'Introduction' },
       { slug: 'getting-started', title: 'Quick start' },
-      { slug: 'patterns', title: 'Patterns & examples' },
+    ],
+  },
+  {
+    heading: 'Patterns',
+    items: [
+      { slug: 'patterns', title: 'Overview' },
+      { slug: 'patterns-background', title: 'Background processing' },
+      { slug: 'patterns-event-bus', title: 'Event bus (EDA)' },
     ],
   },
   {
@@ -22,8 +29,13 @@ export const NAV = [
       { slug: 'connection', title: 'Connection & lifecycle' },
       { slug: 'processors', title: 'Processors' },
       { slug: 'publishing', title: 'Publishing' },
-      { slug: 'advanced', title: 'Advanced features' },
       { slug: 'architecture', title: 'Behind the scenes' },
+    ],
+  },
+  {
+    heading: 'Advanced features',
+    items: [
+      { slug: 'advanced', title: 'Overview' },
     ],
   },
   {
