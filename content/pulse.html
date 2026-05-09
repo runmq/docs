@@ -1,0 +1,115 @@
+<div class="eyebrow">Pulse · Dashboard</div>
+<h1>Meet <em>Pulse</em> — a dashboard for RunMQ.</h1>
+<p class="lead">
+  Pulse is the official web-based monitoring and management dashboard for RunMQ. Watch your queues live,
+  inspect dead-letter messages, toggle retries and DLQ routing, and reprocess failed jobs — all from a clean,
+  minimal UI with full dark-mode support.
+</p>
+
+<div class="hero__actions">
+  <a class="btn btn--primary" href="#/pulse#getting-started">Get started <span class="arrow">→</span></a>
+  <a class="btn btn--mono" href="https://github.com/runmq/pulse" target="_blank" rel="noopener">★ GitHub</a>
+</div>
+
+<h2>What you get</h2>
+
+<div class="features">
+  <div class="feature">
+    <div class="feature__icon">◉</div>
+    <h3>Real-time queue monitoring</h3>
+    <p>Live message counts, consumer stats, and queue states with configurable auto-refresh.</p>
+  </div>
+  <div class="feature">
+    <div class="feature__icon">≡</div>
+    <h3>Queue detail view</h3>
+    <p>Per-queue metrics: total, ready, unacknowledged, retry, and DLQ message counts.</p>
+  </div>
+  <div class="feature">
+    <div class="feature__icon">↻</div>
+    <h3>Retry management</h3>
+    <p>Enable or disable automatic retries and tune retry delays per queue, without redeploying.</p>
+  </div>
+  <div class="feature">
+    <div class="feature__icon">⌫</div>
+    <h3>Dead letter queue</h3>
+    <p>Toggle DLQ routing, inspect messages with full payload and headers, reprocess or clear.</p>
+  </div>
+  <div class="feature">
+    <div class="feature__icon">⌕</div>
+    <h3>Message inspector</h3>
+    <p>Browse retry and DLQ messages with expandable JSON payloads, headers, and routing keys.</p>
+  </div>
+  <div class="feature">
+    <div class="feature__icon">◐</div>
+    <h3>Dark &amp; light mode</h3>
+    <p>Clean, minimal UI inspired by instatus.com — subtle borders, no heavy glassmorphism.</p>
+  </div>
+</div>
+
+<h2>Screenshots</h2>
+<p>A peek at the queues list and queue detail views.</p>
+
+<figure class="screenshot">
+  <img src="https://github.com/user-attachments/assets/127ee72c-9d49-4d9d-8156-026566e07806" alt="Pulse — queues list view" loading="lazy" />
+</figure>
+
+<figure class="screenshot">
+  <img src="https://github.com/user-attachments/assets/c37e810d-0033-47af-b1d1-78513b00c4dc" alt="Pulse — queue detail view" loading="lazy" />
+</figure>
+
+<h2 id="getting-started">Getting started</h2>
+
+<h3>Prerequisites</h3>
+<ul>
+  <li><a href="https://docs.docker.com/get-docker/" target="_blank" rel="noopener">Docker</a> and <a href="https://docs.docker.com/compose/install/" target="_blank" rel="noopener">Docker Compose</a></li>
+  <li>A running <a href="https://www.rabbitmq.com/" target="_blank" rel="noopener">RabbitMQ</a> instance with the <strong>Management &amp; Shovel plugins</strong> enabled</li>
+</ul>
+
+<h3>1. Clone the repository</h3>
+<pre><code data-lang="bash">git clone https://github.com/runmq/pulse.git
+cd pulse</code></pre>
+
+<h3>2. Point Pulse at your RabbitMQ</h3>
+<p>Update the environment variables in <code>docker-compose.yml</code>:</p>
+<pre><code data-lang="yaml">RABBITMQ_HOST: your-rabbitmq-host
+RABBITMQ_PORT: 15672
+RABBITMQ_MANAGEMENT_USER: your-user
+RABBITMQ_MANAGEMENT_PASSWORD: your-password
+JWT_SECRET: your-secret-key</code></pre>
+
+<h3>3. Start the dashboard</h3>
+<pre><code data-lang="bash">docker compose up --build</code></pre>
+
+<h3>4. Create an admin user</h3>
+<pre><code data-lang="bash">docker compose exec backend node scripts/create-user.js admin yourPassword admin</code></pre>
+
+<h3>5. Open the UI</h3>
+<p>Visit <a href="http://localhost:3000" target="_blank" rel="noopener">http://localhost:3000</a> and sign in to start managing your queues.</p>
+
+<div class="callout callout--info">
+  <strong>Authentication.</strong> Pulse uses JWT with a 24-hour token expiration. Credentials are stored in
+  <code>backend/config/users.json</code> with bcrypt-hashed passwords — no database required.
+</div>
+
+<h2>Development</h2>
+<p>Prefer to run without Docker? Start the backend and frontend separately:</p>
+
+<pre><code data-lang="bash"># Backend (NestJS, port 3001)
+cd backend &amp;&amp; npm install &amp;&amp; npm run start:dev
+
+# Frontend (Next.js 14, port 3000)
+cd frontend &amp;&amp; npm install &amp;&amp; npm run dev</code></pre>
+
+<h2>How it works</h2>
+<p>
+  Pulse talks to RabbitMQ's Management API directly — no extra database, no agents to install. RunMQ-managed
+  queues are detected by their dead-letter exchange (<code>_runmq_dead_letter_router</code>), and toggles for
+  retries and DLQ routing are persisted as RabbitMQ policies and bindings, so configuration travels with the
+  broker itself.
+</p>
+<p>DLQ reprocessing uses RabbitMQ shovels, available as one-time runs or on a cron schedule.</p>
+
+<div class="callout callout--tip">
+  Pulse is open-source and MIT-licensed. Issues, ideas, and PRs are welcome on the
+  <a href="https://github.com/runmq/pulse" target="_blank" rel="noopener">GitHub repository</a>.
+</div>

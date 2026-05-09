@@ -15,7 +15,7 @@
 </p>
 
 <div class="topology">
-  <svg viewBox="0 0 920 460" role="img" aria-label="RunMQ topology overview" xmlns="http://www.w3.org/2000/svg">
+  <svg viewBox="0 0 960 480" role="img" aria-label="RunMQ topology overview" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
         <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
@@ -27,70 +27,80 @@
 
     <!-- Publisher -->
     <g class="topo-node">
-      <rect x="20" y="40" width="140" height="44" rx="8"/>
-      <text x="90" y="68" text-anchor="middle">publisher</text>
+      <rect x="20" y="60" width="140" height="44" rx="8"/>
+      <text x="90" y="88" text-anchor="middle">publisher</text>
     </g>
+
+    <!-- Publisher → Router -->
+    <line x1="160" y1="82" x2="270" y2="82" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
+    <text x="215" y="72" text-anchor="middle" class="topo-edge">publish('user.created', …)</text>
 
     <!-- Router exchange -->
     <g class="topo-exchange">
-      <rect x="220" y="34" width="200" height="56" rx="10"/>
-      <text x="320" y="58" text-anchor="middle" class="topo-strong">_runmq_router</text>
-      <text x="320" y="78" text-anchor="middle" class="topo-sub">topic exchange</text>
+      <rect x="270" y="54" width="200" height="56" rx="10"/>
+      <text x="370" y="78" text-anchor="middle" class="topo-strong">_runmq_router</text>
+      <text x="370" y="98" text-anchor="middle" class="topo-sub">topic exchange</text>
     </g>
-    <line x1="160" y1="62" x2="220" y2="62" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
 
-    <!-- Two processor queues -->
+    <!-- Router → fan-out trunk → two processor queues (orthogonal, not diagonal) -->
+    <line x1="470" y1="82" x2="530" y2="82" stroke="currentColor" stroke-width="1.5"/>
+    <line x1="530" y1="48" x2="530" y2="138" stroke="currentColor" stroke-width="1.5"/>
+
+    <!-- emailService queue (top) -->
     <g class="topo-queue">
-      <rect x="500" y="20" width="200" height="56" rx="10"/>
-      <text x="600" y="44" text-anchor="middle" class="topo-strong">queue: emailService</text>
-      <text x="600" y="64" text-anchor="middle" class="topo-sub">durable · DLX → DLR</text>
+      <rect x="600" y="20" width="220" height="56" rx="10"/>
+      <text x="710" y="44" text-anchor="middle" class="topo-strong">queue: emailService</text>
+      <text x="710" y="64" text-anchor="middle" class="topo-sub">durable · DLX → DLR</text>
     </g>
-    <line x1="420" y1="50" x2="500" y2="48" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
-    <text x="460" y="40" text-anchor="middle" class="topo-edge">user.created</text>
+    <line x1="530" y1="48" x2="600" y2="48" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
+    <text x="565" y="38" text-anchor="middle" class="topo-edge">user.created</text>
 
+    <!-- smsService queue (bottom) -->
     <g class="topo-queue">
-      <rect x="500" y="100" width="200" height="56" rx="10"/>
-      <text x="600" y="124" text-anchor="middle" class="topo-strong">queue: smsService</text>
-      <text x="600" y="144" text-anchor="middle" class="topo-sub">durable · DLX → DLR</text>
+      <rect x="600" y="110" width="220" height="56" rx="10"/>
+      <text x="710" y="134" text-anchor="middle" class="topo-strong">queue: smsService</text>
+      <text x="710" y="154" text-anchor="middle" class="topo-sub">durable · DLX → DLR</text>
     </g>
-    <line x1="420" y1="76" x2="500" y2="128" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
-    <text x="460" y="92" text-anchor="middle" class="topo-edge">user.created</text>
+    <line x1="530" y1="138" x2="600" y2="138" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
+    <text x="565" y="128" text-anchor="middle" class="topo-edge">user.created</text>
 
-    <!-- Retry path label -->
-    <text x="600" y="180" text-anchor="middle" class="topo-edge">on reject:  basic.nack(requeue=false)</text>
+    <!-- smsService → DL router (retry path) -->
+    <line x1="710" y1="166" x2="710" y2="220" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#arrAccent)"/>
+    <text x="710" y="195" text-anchor="middle" class="topo-edge">on reject: basic.nack(requeue=false)</text>
 
     <!-- Dead-letter router exchange -->
     <g class="topo-exchange">
-      <rect x="500" y="200" width="200" height="56" rx="10"/>
-      <text x="600" y="224" text-anchor="middle" class="topo-strong">_runmq_dead_letter_router</text>
-      <text x="600" y="244" text-anchor="middle" class="topo-sub">topic exchange</text>
+      <rect x="600" y="220" width="220" height="56" rx="10"/>
+      <text x="710" y="244" text-anchor="middle" class="topo-strong">_runmq_dead_letter_router</text>
+      <text x="710" y="264" text-anchor="middle" class="topo-sub">topic exchange</text>
     </g>
-    <line x1="600" y1="156" x2="600" y2="200" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#arrAccent)"/>
 
     <!-- Retry-delay queue -->
     <g class="topo-queue topo-queue--accent">
-      <rect x="220" y="200" width="240" height="56" rx="10"/>
-      <text x="340" y="224" text-anchor="middle" class="topo-strong">_runmq_retry_delay_smsService</text>
-      <text x="340" y="244" text-anchor="middle" class="topo-sub">TTL = attemptsDelay · DLX → router</text>
+      <rect x="270" y="220" width="280" height="56" rx="10"/>
+      <text x="410" y="244" text-anchor="middle" class="topo-strong">_runmq_retry_delay_smsService</text>
+      <text x="410" y="264" text-anchor="middle" class="topo-sub">TTL = attemptsDelay · DLX → router</text>
     </g>
-    <line x1="500" y1="228" x2="460" y2="228" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#arrAccent)"/>
-    <text x="480" y="220" text-anchor="middle" class="topo-edge">smsService</text>
 
-    <!-- Re-inject from delay queue back to router (TTL expires → DLX = router → routing key = processor name) -->
-    <path d="M 220 228 Q 120 228 120 110 Q 120 50 220 50" fill="none" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#arrAccent)"/>
-    <text x="60" y="120" class="topo-edge" transform="rotate(-90 60 120)">TTL expires → re-inject</text>
+    <!-- DL router → retry-delay queue -->
+    <line x1="600" y1="248" x2="550" y2="248" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#arrAccent)"/>
+    <text x="575" y="240" text-anchor="middle" class="topo-edge">smsService</text>
+
+    <!-- Re-inject from delay queue back to router (TTL expires) -->
+    <path d="M 270 248 Q 200 248 200 165 Q 200 82 270 82" fill="none" stroke="var(--accent)" stroke-width="1.5" marker-end="url(#arrAccent)"/>
+    <text x="155" y="165" text-anchor="middle" class="topo-edge" transform="rotate(-90 155 165)">TTL expires → re-inject</text>
 
     <!-- DLQ -->
     <g class="topo-queue topo-queue--dlq">
-      <rect x="500" y="290" width="200" height="56" rx="10"/>
-      <text x="600" y="314" text-anchor="middle" class="topo-strong">_runmq_dlq_smsService</text>
-      <text x="600" y="334" text-anchor="middle" class="topo-sub">durable · final failures</text>
+      <rect x="600" y="320" width="220" height="56" rx="10"/>
+      <text x="710" y="344" text-anchor="middle" class="topo-strong">_runmq_dlq_smsService</text>
+      <text x="710" y="364" text-anchor="middle" class="topo-sub">durable · final failures</text>
     </g>
-    <line x1="600" y1="256" x2="600" y2="290" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
-    <text x="608" y="276" class="topo-edge">attempts ≥ max</text>
+    <line x1="710" y1="276" x2="710" y2="320" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
+    <text x="710" y="300" text-anchor="middle" class="topo-edge">attempts ≥ max</text>
 
     <!-- Legend -->
-    <g class="topo-legend" transform="translate(20, 380)">
+    <g class="topo-legend" transform="translate(20, 420)">
       <rect x="0" y="0" width="14" height="14" rx="3" class="topo-legend-exchange"/>
       <text x="22" y="11">exchange</text>
       <rect x="100" y="0" width="14" height="14" rx="3" class="topo-legend-queue"/>

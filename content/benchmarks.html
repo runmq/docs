@@ -12,6 +12,10 @@
 <h2>Throughput at a glance</h2>
 
 <h3>Publish throughput (msg/s)</h3>
+<p class="bench__caption">
+  <strong>What this measures:</strong> how many messages per second a single producer can push, with no consumer attached.
+  Each library publishes a fixed total (10,000 messages, 100-byte payload) and the elapsed time gives msg/s.
+</p>
 <div class="bench" data-max="300000">
   <div class="bench__row" data-lib="runmq" data-label="RunMQ" data-value="253104" data-display="253,104"></div>
   <div class="bench__row" data-lib="bullmq" data-label="BullMQ" data-value="53636" data-display="53,636"></div>
@@ -19,13 +23,23 @@
 <p><strong>4.7× faster.</strong> RunMQ publishes via in-process AMQP buffer; BullMQ awaits a Redis pipeline round-trip.</p>
 
 <h3>Consume throughput (msg/s)</h3>
+<p class="bench__caption">
+  <strong>What this measures:</strong> how fast a single no-op consumer drains a pre-loaded queue. The queue is filled
+  with 10,000 messages, then a consumer with a no-op handler is started; timing runs from the first message consumed to
+  the last.
+</p>
 <div class="bench" data-max="32000">
   <div class="bench__row" data-lib="runmq" data-label="RunMQ" data-value="27045" data-display="27,045"></div>
   <div class="bench__row" data-lib="bullmq" data-label="BullMQ" data-value="8262" data-display="8,262"></div>
 </div>
-<p><strong>3.3× faster.</strong> Single no-op consumer, measured first-consumed → last-consumed.</p>
+<p><strong>3.3× faster.</strong></p>
 
 <h3>Concurrent consumers (msg/s, 1ms simulated work)</h3>
+<p class="bench__caption">
+  <strong>What this measures:</strong> drain rate when handlers do non-trivial work — each handler awaits a 1 ms sleep
+  before acking. Two configurations: one in-flight message at a time (<em>· 1</em>) and eight in-flight per process
+  (<em>· 8</em>). This isolates how well each library overlaps I/O across concurrent in-flight messages.
+</p>
 <div class="bench" data-max="36000">
   <div class="bench__row" data-lib="runmq" data-label="RunMQ · 1" data-value="9594"   data-display="9,594"></div>
   <div class="bench__row" data-lib="bullmq" data-label="BullMQ · 1" data-value="559"  data-display="559"></div>
@@ -34,6 +48,11 @@
 </div>
 
 <h2>End-to-end latency</h2>
+<p>
+  <strong>What this measures:</strong> per-message time from <code>publish()</code> returning to the consumer's handler
+  receiving that same message. The producer stamps each message with a high-resolution timestamp; the consumer subtracts
+  it from <code>process.hrtime()</code> on receipt. Numbers below are over 10,000 messages, mean of 3 runs ± stddev.
+</p>
 <table class="props">
   <thead><tr><th>Metric</th><th>RunMQ</th><th>BullMQ</th><th>Winner</th></tr></thead>
   <tbody>
@@ -50,26 +69,38 @@
 </p>
 
 <h2>Payload size impact</h2>
+<p>
+  <strong>What this measures:</strong> how publish and consume throughput change as the message payload grows. Same
+  scenarios as the throughput tests above (publish: producer alone; consume: drain a pre-loaded queue), repeated at
+  three payload sizes. All numbers are <strong>messages per second</strong>.
+</p>
 <table class="props">
-  <thead><tr><th>Scenario</th><th>RunMQ</th><th>BullMQ</th><th>Ratio</th></tr></thead>
+  <thead><tr><th>Scenario</th><th>RunMQ (msg/s)</th><th>BullMQ (msg/s)</th><th>Ratio</th></tr></thead>
   <tbody>
-    <tr><td>Publish 100B</td><td>292,402</td><td>51,940</td><td>5.6×</td></tr>
-    <tr><td>Publish 1KB</td><td>171,739</td><td>42,253</td><td>4.1×</td></tr>
-    <tr><td>Publish 10KB</td><td>48,497</td><td>16,976</td><td>2.9×</td></tr>
-    <tr><td>Consume 100B</td><td>28,769</td><td>8,365</td><td>3.4×</td></tr>
-    <tr><td>Consume 1KB</td><td>26,527</td><td>7,789</td><td>3.4×</td></tr>
-    <tr><td>Consume 10KB</td><td>15,984</td><td>5,450</td><td>2.9×</td></tr>
+    <tr><td>Publish · 100 B payload</td><td>292,402</td><td>51,940</td><td>5.6×</td></tr>
+    <tr><td>Publish · 1 KB payload</td><td>171,739</td><td>42,253</td><td>4.1×</td></tr>
+    <tr><td>Publish · 10 KB payload</td><td>48,497</td><td>16,976</td><td>2.9×</td></tr>
+    <tr><td>Consume · 100 B payload</td><td>28,769</td><td>8,365</td><td>3.4×</td></tr>
+    <tr><td>Consume · 1 KB payload</td><td>26,527</td><td>7,789</td><td>3.4×</td></tr>
+    <tr><td>Consume · 10 KB payload</td><td>15,984</td><td>5,450</td><td>2.9×</td></tr>
   </tbody>
 </table>
+<p>
+  Both libraries slow down as payloads grow — serialization and network bytes dominate at 10 KB. The gap between RunMQ and
+  BullMQ narrows at larger sizes because raw transport speed matters less when each message takes longer to move.
+</p>
 
 <h2>Reliability overhead</h2>
-<p>The cost of enabling retries (3 attempts, 100 ms delay):</p>
-
+<p>
+  <strong>What this measures:</strong> consume throughput with retries disabled vs. enabled (3 attempts, 100 ms delay
+  between attempts). Same single-consumer drain scenario as the consume-throughput test; the only difference is whether
+  retry/DLQ machinery is configured. Tells you the price of opting into reliability when nothing actually fails.
+</p>
 <table class="props">
-  <thead><tr><th>Mode</th><th>RunMQ</th><th>BullMQ</th><th>Ratio</th></tr></thead>
+  <thead><tr><th>Mode</th><th>RunMQ (msg/s)</th><th>BullMQ (msg/s)</th><th>Ratio</th></tr></thead>
   <tbody>
-    <tr><td>Basic</td><td>29,187 ±222</td><td>8,334 ±43</td><td>3.5×</td></tr>
-    <tr><td>With retries</td><td>29,700 ±435</td><td>8,476 ±40</td><td>3.5×</td></tr>
+    <tr><td>Basic (no retries)</td><td>29,187 ±222</td><td>8,334 ±43</td><td>3.5×</td></tr>
+    <tr><td>With retries enabled</td><td>29,700 ±435</td><td>8,476 ±40</td><td>3.5×</td></tr>
   </tbody>
 </table>
 
@@ -78,7 +109,6 @@
 <h2 id="caveats">Known caveats</h2>
 <ul>
   <li><strong>Different guarantees on publish.</strong> RunMQ's <code>publish()</code> writes to an in-process AMQP buffer; BullMQ's <code>addBulk()</code> awaits a Redis pipeline confirmation. Same scenario, different semantics — RunMQ is measuring "buffer write speed," BullMQ "confirmed persistence speed."</li>
-  <li><strong>Redis is in-memory; RabbitMQ is disk-backed.</strong> RabbitMQ persists messages by default; Redis doesn't. This favors BullMQ on E2E latency by design.</li>
   <li><strong>Execution ordering is fixed.</strong> RunMQ runs first in every scenario, paying the JIT cold-start cost. This biases <em>against</em> RunMQ.</li>
   <li><strong>1 ms simulated work in concurrent-consumer tests</strong> over-weights per-message overhead. Realistic 10–100 ms work would narrow the gap.</li>
 </ul>

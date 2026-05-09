@@ -2,107 +2,10 @@
 <h1>Background processing <em>done right</em>.</h1>
 <p class="lead">
   Move slow, expensive, or unreliable work off the request path. A worker pool drains a dedicated queue, retries on failure,
-  and parks unrecoverable jobs in a DLQ for inspection or replay. It's the simplest pattern to start with — and the one most
-  applications need first.
+  and parks unrecoverable jobs in a DLQ. The simplest pattern to start with — and the one most applications need first.
 </p>
 
-<h2>What it is</h2>
-
-<p>
-  Background processing is the use of a queue to <strong>defer work that doesn't need to happen synchronously</strong>. Instead
-  of doing the work inside the HTTP handler that triggered it, the handler enqueues a job and returns immediately. A separate
-  worker process — or a pool of them — picks the job up and runs it on its own time.
-</p>
-
-<div class="flow">HTTP request ─► handler ─► <b>publish('email.send', …)</b> ─► 200 OK
-                                          │
-                                          ▼
-                            queue: <b>emailWorker</b>  (N consumers)
-                                          │
-                              ┌───────────┴────────────┐
-                              ▼                        ▼
-                          retries (TTL)            DLQ on exhaustion</div>
-
-<p>
-  RunMQ's primitives map onto this pattern directly: a single processor binds to a topic, declares a queue, and runs your
-  handler with retries and a DLQ wired in. No infrastructure to write — just a function.
-</p>
-
-<h2>When to use it</h2>
-
-<p>Reach for background processing whenever a piece of work has any of these properties:</p>
-
-<table class="props">
-  <thead><tr><th>Property</th><th>Why a queue helps</th></tr></thead>
-  <tbody>
-    <tr>
-      <td><strong>Slow</strong> — takes longer than a request should</td>
-      <td>Free the request thread. Latency-sensitive APIs stay fast under load.</td>
-    </tr>
-    <tr>
-      <td><strong>Expensive</strong> — CPU, memory, or external rate-limited APIs</td>
-      <td>Cap concurrency at the consumer. Apply backpressure naturally via queue depth.</td>
-    </tr>
-    <tr>
-      <td><strong>Unreliable</strong> — third-party APIs, flaky networks</td>
-      <td>Automatic retries with exponential-style delays via TTL policies.</td>
-    </tr>
-    <tr>
-      <td><strong>Bursty</strong> — peaks far above sustained load</td>
-      <td>The queue smooths spikes. Workers drain at their own pace.</td>
-    </tr>
-    <tr>
-      <td><strong>Optional</strong> — best-effort work the user shouldn't wait on</td>
-      <td>Decouple the user's response from the side-effect.</td>
-    </tr>
-  </tbody>
-</table>
-
-<h3>Concrete examples</h3>
-
-<ul>
-  <li><strong>Transactional email</strong> — welcome emails, password resets, receipts.</li>
-  <li><strong>Notifications</strong> — push, SMS, in-app, with rate limits and retry semantics.</li>
-  <li><strong>Media processing</strong> — image resizing, video transcoding, thumbnail generation.</li>
-  <li><strong>Webhook delivery</strong> — outbound webhooks to customers, with retries on 5xx.</li>
-  <li><strong>Reports &amp; exports</strong> — long CSV/PDF generation, then notify the user when ready.</li>
-  <li><strong>Index updates</strong> — re-indexing search documents after a write.</li>
-  <li><strong>Periodic sync</strong> — pulling third-party data on a schedule.</li>
-  <li><strong>Cleanup jobs</strong> — deleting expired sessions, archiving old rows.</li>
-</ul>
-
-<h2>Why it matters in microservices</h2>
-
-<p>
-  In a microservice architecture, every synchronous call between services is a coupling — and a liability. If service A calls
-  service B which calls service C, A's response time is the sum of all three, and any one of them being slow or down breaks
-  the whole chain.
-</p>
-
-<p>Background processing breaks that chain in three important ways:</p>
-
-<ul>
-  <li>
-    <strong>Latency isolation.</strong> A user-facing service stays fast even when a downstream worker is slow. The hand-off is
-    a sub-millisecond enqueue — not an unbounded synchronous call.
-  </li>
-  <li>
-    <strong>Failure isolation.</strong> If the worker is down, jobs accumulate in the queue. The producer doesn't see errors;
-    the queue absorbs them. When the worker recovers, it drains the backlog. No retries-in-the-request, no cascading failures.
-  </li>
-  <li>
-    <strong>Scaling independence.</strong> The web tier scales by RPS; the worker tier scales by queue depth. They use different
-    metrics, different machines, and often different deploy cadences. You can scale the part of your system that's actually
-    bottlenecked without over-provisioning the rest.
-  </li>
-</ul>
-
-<div class="callout callout--info">
-  <strong>Rule of thumb:</strong> if the user wouldn't notice (or wouldn't mind) the work happening 200ms — or 30s — later,
-  it belongs in a background job. Anything you can move off the request path makes the request path more reliable.
-</div>
-
-<h2>The minimum viable setup</h2>
+<h2>Quick start</h2>
 
 <pre><code data-lang="ts">import { RunMQ } from 'runmq';
 
@@ -127,14 +30,11 @@ mq.publish('email.send', {
 
 <p>That's the whole thing. The queue, retries, DLQ, and re-injection topology are created automatically.</p>
 
-<h2>Tuning for your workload</h2>
+<h2>Tuning</h2>
 
 <h3>Concurrency: <code>consumersCount</code></h3>
 
-<p>
-  This is the number of messages a single worker process will handle in parallel. Pick it based on what bottlenecks your
-  handler:
-</p>
+<p>The number of messages a single worker process handles in parallel. Pick it based on the bottleneck:</p>
 
 <table class="props">
   <thead><tr><th>Bottleneck</th><th>Suggested <code>consumersCount</code></th></tr></thead>
@@ -148,29 +48,49 @@ mq.publish('email.send', {
 
 <h3>Retries: <code>attempts</code> and <code>attemptsDelay</code></h3>
 
-<p>
-  Retries paper over transient failures — network blips, brief downtimes, rate-limit responses. They don't fix bugs, and they
-  don't help with permanent errors. Pick numbers that reflect the real failure mode:
-</p>
-
 <ul>
-  <li><strong>Transient network failures:</strong> <code>attempts: 5</code>, <code>attemptsDelay: 5_000–30_000</code>.</li>
-  <li><strong>Rate-limited APIs:</strong> fewer attempts, longer delays. Better: respect <code>Retry-After</code> headers.</li>
-  <li><strong>Webhook delivery:</strong> many attempts (10+) over hours; customers expect this.</li>
-  <li><strong>Validation-driven failures:</strong> <code>attempts: 1</code>. Retrying invalid input never helps.</li>
+  <li><code>attempts</code> — max times RunMQ hands a message to your handler before sending it to the DLQ.</li>
+  <li><code>attemptsDelay</code> — milliseconds the message waits between failure and the next attempt.</li>
 </ul>
 
+<p>Retries are for <strong>transient</strong> failures. They don't fix bugs.</p>
+
+<table class="props">
+  <thead><tr><th>Failure mode</th><th>Suggested settings</th><th>Reasoning</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Transient network failures</td>
+      <td><code>attempts: 5</code>, <code>attemptsDelay: 5_000–30_000</code></td>
+      <td>Most blips clear in under a minute.</td>
+    </tr>
+    <tr>
+      <td>Rate-limited APIs (429)</td>
+      <td><code>attempts: 3–5</code>, <code>attemptsDelay: 60_000+</code></td>
+      <td>Retrying faster than the API allows just keeps you rate-limited. To honor exact <code>Retry-After</code> headers, do it inside the handler.</td>
+    </tr>
+    <tr>
+      <td>Outbound webhooks</td>
+      <td><code>attempts: 10+</code>, minutes-to-hours delay</td>
+      <td>Customer endpoints may be down for maintenance.</td>
+    </tr>
+    <tr>
+      <td>Validation / business-rule failures</td>
+      <td><code>attempts: 1</code></td>
+      <td>A malformed payload won't become valid on retry.</td>
+    </tr>
+  </tbody>
+</table>
+
 <div class="callout callout--info">
-  <strong>Use <code>usePoliciesForDelay: true</code> in production.</strong> It lets you change retry delays at runtime without
-  re-declaring queues. During an incident — say, a downstream is degraded — you can dial the delay up to 5 minutes from a
-  dashboard, then back down when it recovers.
+  <strong>Use <code>usePoliciesForDelay: true</code> in production.</strong> By default <code>attemptsDelay</code> is baked into
+  the retry queue at declare time, so changing it later means deleting and re-declaring the queue. With policies on, the delay
+  lives in a RabbitMQ policy you can edit at runtime — handy when a downstream is degraded and you want to dial the delay up
+  without touching queues.
 </div>
 
 <h3>Schema validation</h3>
 
-<p>
-  Stop bad jobs from ever reaching your handler. RunMQ supports an Ajv-based schema with two failure strategies:
-</p>
+<p>Stop bad jobs from ever reaching your handler. RunMQ supports an Ajv-based schema with two failure strategies:</p>
 
 <pre><code data-lang="ts">await mq.process('image.resize', {
   name: 'imageWorker',
@@ -192,54 +112,15 @@ mq.publish('email.send', {
 }, async (job) => { /* job.message is validated */ });</code></pre>
 
 <p>
-  With <code>'dlq'</code>, malformed messages skip retries entirely and land in the DLQ — because validation failures don't
-  fix themselves over time. <code>'retry'</code> is appropriate when schemas can drift (e.g., you just deployed a new validator
-  and there's a brief overlap with old producers).
+  <code>'dlq'</code>: malformed messages skip retries entirely — validation failures don't fix themselves over time.
+  <code>'retry'</code>: appropriate when schemas can drift (e.g., briefly during a deploy that introduces a new validator).
 </p>
 
-<h2>Operating the DLQ</h2>
+<h2>Idempotency</h2>
 
 <p>
-  When a job exhausts its retries, it lands in <code>_runmq_dlq_{name}</code> for inspection. RunMQ's DLQ is bound back to the
-  router exchange, so replay is just <em>moving messages from the DLQ back to the processor queue</em> — no special tooling
-  needed beyond RabbitMQ's built-in shovel or the management UI.
+  Retries mean any handler may run more than once (e.g., crash after the work, before ack). Make handlers idempotent:
 </p>
-
-<ul>
-  <li><strong>Inspect first.</strong> A flood of DLQ'd messages usually points to a bug or a downstream incident — replay won't help until you fix the root cause.</li>
-  <li><strong>Triage.</strong> Sort DLQ entries by error class. The fix for "auth token expired" is different from "payload too large".</li>
-  <li><strong>Replay deliberately.</strong> Once the underlying issue is resolved, shovel back. The handler sees a fresh delivery; retry counts reset.</li>
-</ul>
-
-<h2>Anti-patterns</h2>
-
-<table class="props">
-  <thead><tr><th>Don't</th><th>Why</th></tr></thead>
-  <tbody>
-    <tr>
-      <td>Use background jobs for work the user is waiting on</td>
-      <td>If the user is staring at a spinner, you need a faster path — not a queue. Use a queue for fire-and-forget work, or pair it with a "ready" notification (email, websocket).</td>
-    </tr>
-    <tr>
-      <td>Set <code>attempts</code> to 1000</td>
-      <td>Retries hide bugs. If a job is failing 50 times, the 51st attempt isn't going to fix it.</td>
-    </tr>
-    <tr>
-      <td>Make handlers non-idempotent</td>
-      <td>Retries mean any successful handler may run more than once (e.g., crash after success, before ack). Charge a card twice and your customer will notice.</td>
-    </tr>
-    <tr>
-      <td>Stuff giant payloads in the message</td>
-      <td>RabbitMQ isn't a blob store. Put a reference (<code>{ s3Key: '…' }</code>) in the message and load the blob in the handler.</td>
-    </tr>
-    <tr>
-      <td>Mix unrelated jobs in one queue</td>
-      <td>One processor = one job type. Mixing means a slow job type blocks the rest, and tuning is a compromise.</td>
-    </tr>
-  </tbody>
-</table>
-
-<h2>Idempotency in three lines</h2>
 
 <pre><code data-lang="ts">await mq.process('payment.charge', { name: 'payments', attempts: 5, attemptsDelay: 10_000 }, async (job) => {
   const { idempotencyKey, amount, customerId } = job.message;
@@ -249,19 +130,132 @@ mq.publish('email.send', {
 });</code></pre>
 
 <p>
-  The producer generates a stable key per logical operation. The handler checks "did I already do this?" before doing it.
-  This is the single most important habit for queue-based systems — and the cheapest insurance against double-processing.
+  The producer generates a stable key per logical operation; the handler checks "did I already do this?" before doing it.
+  The cheapest insurance against double-processing.
 </p>
 
-<h2>Growing into an event bus</h2>
+<h2>Operating the DLQ</h2>
 
 <p>
-  When a second team wants to do something with <code>email.send</code> events — say, count them for analytics — you don't
-  need to migrate. You add a second processor on the same topic with its own queue. The two consumers run independently;
-  failures in analytics don't affect email delivery.
+  When a job exhausts its retries it lands in <code>_runmq_dlq_{name}</code>. RunMQ's DLQ is bound back to the router exchange,
+  so replay is just <em>moving messages from the DLQ back to the processor queue</em> — and
+  <a href="https://github.com/runmq/pulse" target="_blank" rel="noopener">RunMQ Pulse</a> is the dashboard built for it.
+  Pulse browses DLQ contents, surfaces the failure reason from <code>x-death</code>, and replays messages back to the original
+  queue with one click.
 </p>
 
+<ul>
+  <li><strong>Inspect first.</strong> A flood of DLQ'd messages usually points to a bug or a downstream incident — replay won't help until you fix the root cause.</li>
+  <li><strong>Triage.</strong> Sort by error class. The fix for "auth token expired" is different from "payload too large".</li>
+  <li><strong>Replay deliberately.</strong> Once the underlying issue is resolved, replay. Retry counts reset.</li>
+</ul>
+
 <p>
-  Once you have two or more processors on a topic, you've crossed into an event bus pattern.
+  Pulse is optional — anything Pulse does, you can do with the management UI or the shovel plugin. It just removes the friction
+  so DLQs stay something you actually look at.
+</p>
+
+<h2>Anti-patterns</h2>
+
+<table class="props">
+  <thead><tr><th>Don't</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Use background jobs for work the user is waiting on</td>
+      <td>If the user is staring at a spinner, you need a faster path — not a queue.</td>
+    </tr>
+    <tr>
+      <td>Set <code>attempts</code> to 1000</td>
+      <td>Retries hide bugs. If a job is failing 50 times, the 51st won't fix it.</td>
+    </tr>
+    <tr>
+      <td>Make handlers non-idempotent</td>
+      <td>Charge a card twice and your customer will notice.</td>
+    </tr>
+    <tr>
+      <td>Stuff giant payloads in the message</td>
+      <td>RabbitMQ isn't a blob store. Pass a reference (<code>{ s3Key: '…' }</code>) instead.</td>
+    </tr>
+    <tr>
+      <td>Mix unrelated jobs in one queue</td>
+      <td>One processor = one job type. Mixing means a slow type blocks the rest, and tuning is a compromise.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Deep dive: how the pattern works</h2>
+
+<h3>What background processing is</h3>
+
+<p>
+  A queue used to <strong>defer work that doesn't need to happen synchronously</strong>. The handler that triggered the work
+  enqueues a job and returns immediately; a separate worker process picks the job up and runs it on its own time.
+</p>
+
+<div class="flow">HTTP request ─► handler ─► <b>publish('email.send', …)</b> ─► 200 OK
+                                          │
+                                          ▼
+                            queue: <b>emailWorker</b>  (N consumers)
+                                          │
+                              ┌───────────┴────────────┐
+                              ▼                        ▼
+                          retries (TTL)            DLQ on exhaustion</div>
+
+<h3>When to reach for it</h3>
+
+<table class="props">
+  <thead><tr><th>Property</th><th>Why a queue helps</th><th>Examples</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Slow</strong></td>
+      <td>Free the request thread; latency-sensitive APIs stay fast.</td>
+      <td>Reports, exports, transcoding</td>
+    </tr>
+    <tr>
+      <td><strong>Expensive</strong></td>
+      <td>Cap concurrency at the consumer; backpressure via queue depth.</td>
+      <td>Image processing, ML inference</td>
+    </tr>
+    <tr>
+      <td><strong>Unreliable</strong></td>
+      <td>Automatic retries with TTL-based delays.</td>
+      <td>Third-party APIs, outbound webhooks</td>
+    </tr>
+    <tr>
+      <td><strong>Bursty</strong></td>
+      <td>The queue smooths spikes; workers drain at their own pace.</td>
+      <td>Signup floods, batch imports</td>
+    </tr>
+    <tr>
+      <td><strong>Optional</strong></td>
+      <td>Decouple user response from side-effects.</td>
+      <td>Emails, notifications, analytics</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout callout--info">
+  <strong>Rule of thumb:</strong> if the user wouldn't notice (or wouldn't mind) the work happening 200ms — or 30s — later,
+  it belongs in a background job.
+</div>
+
+<h3>Why it matters in microservices</h3>
+
+<p>
+  Every synchronous call between services is a coupling. If A calls B which calls C, A's response time is the sum of all
+  three, and any one being down breaks the whole chain. Background processing breaks the chain in three ways:
+</p>
+
+<ul>
+  <li><strong>Latency isolation.</strong> The user-facing service stays fast; the hand-off is a sub-millisecond enqueue.</li>
+  <li><strong>Failure isolation.</strong> If the worker is down, jobs accumulate in the queue. The producer never sees errors.</li>
+  <li><strong>Scaling independence.</strong> The web tier scales by RPS; the worker tier scales by queue depth — different metrics, different machines.</li>
+</ul>
+
+<h3>Growing into an event bus</h3>
+
+<p>
+  Add a second processor with a different name to the same topic and you've crossed into an event bus pattern — no migration,
+  no broker change. Two consumers run independently; failures in one don't affect the other.
   <a href="#/patterns-event-bus">Read the event bus guide →</a>
 </p>

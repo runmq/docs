@@ -47,6 +47,12 @@ export const NAV = [
     ],
   },
   {
+    heading: 'Pulse (dashboard)',
+    items: [
+      { slug: 'pulse', title: 'Overview' },
+    ],
+  },
+  {
     heading: 'Reference',
     items: [
       { slug: 'benchmarks', title: 'Benchmarks' },
