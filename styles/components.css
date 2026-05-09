@@ -613,7 +613,8 @@
 
 /* ───── Screenshot figure ───── */
 .screenshot {
-  margin: 18px 0 24px;
+  margin: 18px auto 24px;
+  max-width: 560px;
   border: 1px solid var(--border);
   border-radius: 12px;
   overflow: hidden;
@@ -626,7 +627,11 @@
   display: block;
   width: 100%;
   height: auto;
+  cursor: zoom-in;
+  transition: opacity var(--transition);
 }
+
+.screenshot img:hover { opacity: .92; }
 
 .screenshot figcaption {
   padding: 10px 14px;
@@ -634,4 +639,50 @@
   font-size: 12px;
   color: var(--text-3);
   border-top: 1px solid var(--border);
+}
+
+/* ───── Lightbox ───── */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: color-mix(in oklab, #000 78%, transparent);
+  cursor: zoom-out;
+  animation: lightbox-fade .15s ease-out;
+}
+
+.lightbox img {
+  max-width: min(100%, 1400px);
+  max-height: 92vh;
+  border-radius: 10px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .55);
+  cursor: zoom-out;
+}
+
+.lightbox__close {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, .25);
+  background: rgba(0, 0, 0, .35);
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.lightbox__close:hover { background: rgba(0, 0, 0, .55); }
+
+@keyframes lightbox-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }

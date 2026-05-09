@@ -153,10 +153,55 @@ function enhanceBenchmarks(root) {
   });
 }
 
+function enhanceScreenshots(root) {
+  const imgs = root.querySelectorAll('.screenshot img');
+  imgs.forEach((img) => {
+    img.addEventListener('click', () => openLightbox(img.src, img.alt));
+  });
+}
+
+function openLightbox(src, alt) {
+  const lb = document.createElement('div');
+  lb.className = 'lightbox';
+  lb.setAttribute('role', 'dialog');
+  lb.setAttribute('aria-modal', 'true');
+  lb.setAttribute('aria-label', alt || 'Screenshot');
+
+  const image = document.createElement('img');
+  image.src = src;
+  image.alt = alt || '';
+
+  const close = document.createElement('button');
+  close.className = 'lightbox__close';
+  close.type = 'button';
+  close.setAttribute('aria-label', 'Close');
+  close.textContent = '×';
+
+  lb.appendChild(image);
+  lb.appendChild(close);
+  document.body.appendChild(lb);
+
+  const prevOverflow = document.body.style.overflow;
+  document.body.style.overflow = 'hidden';
+
+  const dismiss = () => {
+    lb.remove();
+    document.body.style.overflow = prevOverflow;
+    document.removeEventListener('keydown', onKey);
+  };
+  const onKey = (e) => { if (e.key === 'Escape') dismiss(); };
+
+  lb.addEventListener('click', dismiss);
+  image.addEventListener('click', (e) => { e.stopPropagation(); dismiss(); });
+  close.addEventListener('click', (e) => { e.stopPropagation(); dismiss(); });
+  document.addEventListener('keydown', onKey);
+}
+
 export function enhanceAll(root) {
   enhanceCodeBlocks(root);
   enhanceTabs(root);
   enhanceCallouts(root);
   enhanceBenchmarks(root);
   enhanceHeadingAnchors(root);
+  enhanceScreenshots(root);
 }
