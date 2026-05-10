@@ -745,6 +745,5 @@
   box-shadow: var(--shadow-sm);
 }
 
-[data-version]:not([data-version-toggle]) { display: none; }
-[data-version][data-version-active='true'] { display: revert; }
-tr[data-version][data-version-active='true'] { display: table-row; }
+html[data-rmq-version='1'] [data-version='2'] { display: none !important; }
+html[data-rmq-version='2'] [data-version='1'] { display: none !important; }

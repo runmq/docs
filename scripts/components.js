@@ -198,41 +198,37 @@ function openLightbox(src, alt) {
 }
 
 function enhanceVersionToggle(root) {
-  const toggles = root.querySelectorAll('[data-version-toggle]');
-  if (!toggles.length) return;
+  const wraps = root.querySelectorAll('[data-version-toggle]');
+  if (!wraps.length) return;
 
   const stored = localStorage.getItem('rmq-version');
   const initial = stored === '1' ? '1' : '2';
 
-  function applyVersion(v) {
-    document.querySelectorAll('[data-version]').forEach((el) => {
-      if (el.hasAttribute('data-version-toggle')) return;
-      el.dataset.versionActive = el.getAttribute('data-version') === v ? 'true' : 'false';
-    });
-    document.querySelectorAll('[data-version-toggle]').forEach((wrap) => {
-      wrap.querySelectorAll('button[data-set-version]').forEach((b) => {
-        b.setAttribute('aria-selected', b.dataset.setVersion === v ? 'true' : 'false');
-      });
-    });
+  function setVersion(v) {
+    document.documentElement.setAttribute('data-rmq-version', v);
     localStorage.setItem('rmq-version', v);
+    document.querySelectorAll('.rmq-vbtn').forEach((b) => {
+      b.setAttribute('aria-selected', b.dataset.v === v ? 'true' : 'false');
+    });
   }
 
-  toggles.forEach((wrap) => {
-    if (wrap.classList.contains('version-toggle--ready')) return;
-    wrap.classList.add('version-toggle', 'version-toggle--ready');
+  wraps.forEach((wrap) => {
+    if (wrap.dataset.ready) return;
+    wrap.dataset.ready = '1';
+    wrap.classList.add('version-toggle');
     wrap.innerHTML = `
       <span class="version-toggle__label">API version</span>
       <div class="version-toggle__buttons" role="tablist" aria-label="Select API version">
-        <button type="button" role="tab" data-set-version="1">1.x</button>
-        <button type="button" role="tab" data-set-version="2">2.x</button>
+        <button type="button" role="tab" class="rmq-vbtn" data-v="1">1.x</button>
+        <button type="button" role="tab" class="rmq-vbtn" data-v="2">2.x</button>
       </div>
     `;
-    wrap.querySelectorAll('button[data-set-version]').forEach((btn) => {
-      btn.addEventListener('click', () => applyVersion(btn.dataset.setVersion));
+    wrap.querySelectorAll('.rmq-vbtn').forEach((btn) => {
+      btn.addEventListener('click', () => setVersion(btn.dataset.v));
     });
   });
 
-  applyVersion(initial);
+  setVersion(initial);
 }
 
 function enhanceTables(root) {
