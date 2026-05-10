@@ -16,11 +16,11 @@
   <strong>What this measures:</strong> how many messages per second a single producer can push, with no consumer attached.
   Each library publishes a fixed total (10,000 messages, 100-byte payload) and the elapsed time gives msg/s.
 </p>
-<div class="bench" data-max="300000">
-  <div class="bench__row" data-lib="runmq" data-label="RunMQ" data-value="253104" data-display="253,104"></div>
-  <div class="bench__row" data-lib="bullmq" data-label="BullMQ" data-value="53636" data-display="53,636"></div>
+<div class="bench" data-max="80000">
+  <div class="bench__row" data-lib="runmq" data-label="RunMQ" data-value="67206" data-display="67,206"></div>
+  <div class="bench__row" data-lib="bullmq" data-label="BullMQ" data-value="53702" data-display="53,702"></div>
 </div>
-<p><strong>4.7× faster.</strong> RunMQ publishes via in-process AMQP buffer; BullMQ awaits a Redis pipeline round-trip.</p>
+<p><strong>1.3× faster.</strong> Both libraries await confirmed persistence — RunMQ's <code>publish()</code> waits for a broker ack (publisher confirms on by default), BullMQ's <code>addBulk()</code> awaits a Redis pipeline round-trip.</p>
 
 <h3>Consume throughput (msg/s)</h3>
 <p class="bench__caption">
@@ -28,11 +28,11 @@
   with 10,000 messages, then a consumer with a no-op handler is started; timing runs from the first message consumed to
   the last.
 </p>
-<div class="bench" data-max="32000">
-  <div class="bench__row" data-lib="runmq" data-label="RunMQ" data-value="27045" data-display="27,045"></div>
-  <div class="bench__row" data-lib="bullmq" data-label="BullMQ" data-value="8262" data-display="8,262"></div>
+<div class="bench" data-max="26000">
+  <div class="bench__row" data-lib="runmq" data-label="RunMQ" data-value="22120" data-display="22,120"></div>
+  <div class="bench__row" data-lib="bullmq" data-label="BullMQ" data-value="8513" data-display="8,513"></div>
 </div>
-<p><strong>3.3× faster.</strong></p>
+<p><strong>2.6× faster.</strong></p>
 
 <h3>Concurrent consumers (msg/s, 1ms simulated work)</h3>
 <p class="bench__caption">
@@ -40,11 +40,11 @@
   before acking. Two configurations: one in-flight message at a time (<em>· 1</em>) and eight in-flight per process
   (<em>· 8</em>). This isolates how well each library overlaps I/O across concurrent in-flight messages.
 </p>
-<div class="bench" data-max="36000">
-  <div class="bench__row" data-lib="runmq" data-label="RunMQ · 1" data-value="9594"   data-display="9,594"></div>
-  <div class="bench__row" data-lib="bullmq" data-label="BullMQ · 1" data-value="559"  data-display="559"></div>
-  <div class="bench__row" data-lib="runmq" data-label="RunMQ · 8" data-value="33991"  data-display="33,991"></div>
-  <div class="bench__row" data-lib="bullmq" data-label="BullMQ · 8" data-value="3929" data-display="3,929"></div>
+<div class="bench" data-max="28000">
+  <div class="bench__row" data-lib="runmq" data-label="RunMQ · 1" data-value="9072"   data-display="9,072"></div>
+  <div class="bench__row" data-lib="bullmq" data-label="BullMQ · 1" data-value="558"  data-display="558"></div>
+  <div class="bench__row" data-lib="runmq" data-label="RunMQ · 8" data-value="24552"  data-display="24,552"></div>
+  <div class="bench__row" data-lib="bullmq" data-label="BullMQ · 8" data-value="3880" data-display="3,880"></div>
 </div>
 
 <h2>End-to-end latency</h2>
@@ -56,16 +56,16 @@
 <table class="props">
   <thead><tr><th>Metric</th><th>RunMQ</th><th>BullMQ</th><th>Winner</th></tr></thead>
   <tbody>
-    <tr><td class="prop-name">mean</td><td>0.69 ±0.04 ms</td><td>0.73 ±0.01 ms</td><td>RunMQ 1.1×</td></tr>
-    <tr><td class="prop-name">p50</td><td>0.65 ±0.05 ms</td><td>0.60 ±0.02 ms</td><td>BullMQ 1.1×</td></tr>
-    <tr><td class="prop-name">p95</td><td>1.35 ±0.02 ms</td><td>1.55 ±0.07 ms</td><td>RunMQ 1.1×</td></tr>
-    <tr><td class="prop-name">p99</td><td>2.59 ±0.27 ms</td><td>2.51 ±0.18 ms</td><td>BullMQ 1.0×</td></tr>
+    <tr><td class="prop-name">mean</td><td>0.81 ±0.07 ms</td><td>0.74 ±0.04 ms</td><td>BullMQ 1.1×</td></tr>
+    <tr><td class="prop-name">p50</td><td>0.59 ±0.09 ms</td><td>0.57 ±0.04 ms</td><td>BullMQ 1.0×</td></tr>
+    <tr><td class="prop-name">p95</td><td>1.88 ±0.21 ms</td><td>1.82 ±0.20 ms</td><td>BullMQ 1.0×</td></tr>
+    <tr><td class="prop-name">p99</td><td>2.52 ±0.12 ms</td><td>2.82 ±0.20 ms</td><td>RunMQ 1.1×</td></tr>
   </tbody>
 </table>
 
 <p>
-  Latency is competitive across the board. Both libraries deliver sub-3 ms p99. RunMQ wins on mean and p95;
-  BullMQ wins on p50 and p99.
+  Latency is competitive across the board. Both libraries deliver sub-3 ms p99. BullMQ wins on mean, p50, and p95
+  by sub-millisecond margins; RunMQ wins on p99.
 </p>
 
 <h2>Payload size impact</h2>
@@ -77,18 +77,18 @@
 <table class="props">
   <thead><tr><th>Scenario</th><th>RunMQ (msg/s)</th><th>BullMQ (msg/s)</th><th>Ratio</th></tr></thead>
   <tbody>
-    <tr><td>Publish · 100 B payload</td><td>292,402</td><td>51,940</td><td>5.6×</td></tr>
-    <tr><td>Publish · 1 KB payload</td><td>171,739</td><td>42,253</td><td>4.1×</td></tr>
-    <tr><td>Publish · 10 KB payload</td><td>48,497</td><td>16,976</td><td>2.9×</td></tr>
-    <tr><td>Consume · 100 B payload</td><td>28,769</td><td>8,365</td><td>3.4×</td></tr>
-    <tr><td>Consume · 1 KB payload</td><td>26,527</td><td>7,789</td><td>3.4×</td></tr>
-    <tr><td>Consume · 10 KB payload</td><td>15,984</td><td>5,450</td><td>2.9×</td></tr>
+    <tr><td>Publish · 100 B payload</td><td>66,422</td><td>52,120</td><td>1.3×</td></tr>
+    <tr><td>Publish · 1 KB payload</td><td>55,074</td><td>42,408</td><td>1.3×</td></tr>
+    <tr><td>Publish · 10 KB payload</td><td>27,821</td><td>16,332</td><td>1.7×</td></tr>
+    <tr><td>Consume · 100 B payload</td><td>21,364</td><td>8,131</td><td>2.6×</td></tr>
+    <tr><td>Consume · 1 KB payload</td><td>19,417</td><td>7,764</td><td>2.5×</td></tr>
+    <tr><td>Consume · 10 KB payload</td><td>10,982</td><td>5,311</td><td>2.1×</td></tr>
   </tbody>
 </table>
 <p>
-  Both libraries slow down as payloads grow — serialization and network bytes dominate at 10 KB. The gap between RunMQ and
-  BullMQ narrows at larger sizes because raw transport speed matters less when each message takes longer to move — though
-  RunMQ is still <strong>3×–6× faster</strong> across every size tested.
+  Both libraries slow down as payloads grow — serialization and network bytes dominate at 10 KB. RunMQ leads
+  <strong>1.3×–2.6×</strong> across every size tested. The publish margin widens at 10 KB (1.7×) where AMQP framing
+  amortizes over larger bodies, while the consume gap stays around 2.5×.
 </p>
 
 <h2>Reliability overhead</h2>
@@ -100,8 +100,8 @@
 <table class="props">
   <thead><tr><th>Mode</th><th>RunMQ (msg/s)</th><th>BullMQ (msg/s)</th><th>Ratio</th></tr></thead>
   <tbody>
-    <tr><td>Basic (no retries)</td><td>29,187 ±222</td><td>8,334 ±43</td><td>3.5×</td></tr>
-    <tr><td>With retries enabled</td><td>29,700 ±435</td><td>8,476 ±40</td><td>3.5×</td></tr>
+    <tr><td>Basic (no retries)</td><td>27,580 ±1,240</td><td>8,326 ±182</td><td>3.3×</td></tr>
+    <tr><td>With retries enabled</td><td>27,139 ±848</td><td>8,282 ±150</td><td>3.3×</td></tr>
   </tbody>
 </table>
 
@@ -109,7 +109,8 @@
 
 <h2 id="caveats">Known caveats</h2>
 <ul>
-  <li><strong>Confirmed publishes by default.</strong> RunMQ's <code>publish()</code> awaits a broker ack out of the box (publisher confirms enabled by default), measuring "confirmed persistence speed" — the same guarantee BullMQ's <code>addBulk()</code> provides via its Redis pipeline confirmation. Under that confirmed mode RunMQ measures <strong>~56,400 msg/s — roughly 80% above BullMQ's ~32,200 msg/s</strong> on the same hardware. If you opt out via <code>usePublisherConfirms: false</code>, RunMQ becomes a buffer write (no delivery guarantee) and the headline number climbs further, but the comparison stops being apples-to-apples.</li>
+  <li><strong>Confirmed publishes by default.</strong> RunMQ's <code>publish()</code> awaits a broker ack out of the box (publisher confirms enabled by default), measuring "confirmed persistence speed" — the same guarantee BullMQ's <code>addBulk()</code> provides via its Redis pipeline confirmation. Both libraries' headline numbers reflect this confirmed-persistence path. If you opt out via <code>usePublisherConfirms: false</code>, RunMQ becomes a buffer write (no delivery guarantee) and its publish rate climbs further, but the comparison stops being apples-to-apples.</li>
+  <li><strong>Redis is in-memory, RabbitMQ is disk-backed.</strong> RabbitMQ persists messages to durable queues by default; Redis operates entirely in-memory. This always favors BullMQ on raw latency.</li>
   <li><strong>Execution ordering is fixed.</strong> RunMQ runs first in every scenario, paying the JIT cold-start cost. This biases <em>against</em> RunMQ.</li>
   <li><strong>1 ms simulated work in concurrent-consumer tests</strong> over-weights per-message overhead. Realistic 10–100 ms work would narrow the gap.</li>
 </ul>
