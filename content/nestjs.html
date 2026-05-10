@@ -4,6 +4,7 @@
   <code>nestjs-runmq</code> gives you the full power of RunMQ with the NestJS DX you'd expect: decorator-based processors,
   an injectable publisher, automatic discovery, and a lifecycle wired into your app.
 </p>
+<div data-version-toggle></div>
 
 <h2>Install</h2>
 <pre><code data-lang="bash">npm install nestjs-runmq runmq</code></pre>
@@ -71,6 +72,7 @@ export class EmailModule {}</code></pre>
 
 <h2>Publish from anywhere</h2>
 
+<div data-version="1">
 <pre><code data-lang="ts">import { Injectable } from '@nestjs/common';
 import { RunMQPublisherService } from 'nestjs-runmq';
 
@@ -83,6 +85,27 @@ export class UserService {
     this.publisher.publish('user.created', { email, name });
   }
 }</code></pre>
+<p class="muted">In 1.x, <code>publish()</code> is fire-and-forget — it returns <code>void</code> once the message is handed to the AMQP buffer.</p>
+</div>
+<div data-version="2">
+<pre><code data-lang="ts">import { Injectable } from '@nestjs/common';
+import { RunMQPublisherService } from 'nestjs-runmq';
+
+@Injectable()
+export class UserService {
+  constructor(private readonly publisher: RunMQPublisherService) {}
+
+  async createUser(email: string, name: string) {
+    // ...persist user
+    await this.publisher.publish('user.created', { email, name });
+  }
+}</code></pre>
+<p class="muted">
+  In 2.x, <code>publish()</code> returns <code>Promise&lt;void&gt;</code> and resolves only after RabbitMQ has acknowledged the message
+  (publisher confirms are on by default). <strong>Always <code>await</code> it</strong> so broker rejections surface where you can act on them.
+  To opt out, pass <code>usePublisherConfirms: false</code> in your <code>RunMQModule.forRoot()</code> config.
+</p>
+</div>
 
 <h2>Logging — already wired</h2>
 <p>
