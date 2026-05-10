@@ -3,6 +3,7 @@
 <p class="lead">
   RunMQ wraps a single AMQP connection and exposes it as a small, well-behaved client. You start it once, share it across the app, and let it manage reconnects, heartbeats, and graceful shutdown.
 </p>
+<div data-version-toggle></div>
 
 <h2>Starting RunMQ</h2>
 <p>The <code>RunMQ.start()</code> async factory opens the connection and resolves only when the broker handshake is complete. After it resolves, you can declare processors and publish.</p>
@@ -44,7 +45,7 @@ const mq = await RunMQ.start({
   server.close();
 
   // 2. let in-flight messages finish, then close AMQP
-  await mq.stop();
+  await mq.disconnect();
   process.exit(0);
 }
 
@@ -66,6 +67,7 @@ process.on('SIGINT', shutdown);</code></pre>
     <tr><td class="prop-name">url</td><td><code>string</code></td><td class="prop-default">—</td><td>AMQP URL of the RabbitMQ server.</td></tr>
     <tr><td class="prop-name">reconnectDelay</td><td><code>number</code></td><td class="prop-default">5000</td><td>Milliseconds before attempting to reconnect.</td></tr>
     <tr><td class="prop-name">maxReconnectAttempts</td><td><code>number</code></td><td class="prop-default">5</td><td>Maximum reconnection attempts.</td></tr>
+    <tr data-version="2"><td class="prop-name">usePublisherConfirms</td><td><code>boolean</code></td><td class="prop-default">true</td><td>Enable RabbitMQ publisher confirms on the user publish channel. When <code>true</code>, <code>publish()</code> resolves only after the broker acks the message and rejects on broker error. Set to <code>false</code> for fire-and-forget publishing. <strong>New in 2.x.</strong></td></tr>
     <tr><td class="prop-name">management</td><td><code>ManagementConfiguration</code></td><td class="prop-default">—</td><td>Management API credentials. Highly recommended.</td></tr>
   </tbody>
 </table>
