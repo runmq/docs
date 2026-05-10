@@ -3,8 +3,6 @@
 <p class="lead">
   Publishing is intentionally minimal — pick a topic, hand it a payload, and RunMQ takes care of routing, durability, and delivery.
 </p>
-<div data-version-toggle></div>
-
 <h2>The publish API</h2>
 
 <div data-version="1">
@@ -96,7 +94,7 @@ await mq.publish('order.placed', orderPayload, requestContext.traceId);</code></
 </p>
 
 <pre><code data-lang="ts">// Publisher
-mq.publish('email.send', { to, subject, body }, ctx.traceId);
+await mq.publish('email.send', { to, subject, body }, ctx.traceId);
 
 // Consumer
 await mq.process('email.send', { name: 'emailWorker', attempts: 3 }, async (msg) => {

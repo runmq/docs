@@ -22,7 +22,7 @@ await mq.process('email.send', {
 });
 
 // Anywhere in your app — an HTTP handler, a cron job, another service:
-mq.publish('email.send', {
+await mq.publish('email.send', {
   to: 'customer@example.com',
   subject: 'Welcome',
   body: '...',

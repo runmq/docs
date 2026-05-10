@@ -4,8 +4,6 @@
   Two decorators do the heavy lifting: <code>@Processor</code> declares the queue, <code>@ProcessMessage</code> marks the handler.
   Everything else is conventional NestJS.
 </p>
-<div data-version-toggle></div>
-
 <h2>Anatomy of <code>@Processor()</code></h2>
 
 <table class="props">
@@ -52,7 +50,7 @@ export class AnalyticsProcessor {
 }</code></pre>
 
 <p>
-  A single <code>publisher.publish('user.created', ...)</code> call delivers atomically to both queues — no need to publish twice.
+  A single <code>await publisher.publish('user.created', ...)</code> call delivers atomically to both queues — no need to publish twice.
 </p>
 
 <h2>Schema validation</h2>

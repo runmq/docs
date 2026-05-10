@@ -41,7 +41,7 @@ await mq.process('user.created', {
 }, async (msg) => pushNotification(msg.message));
 
 // Anywhere in the producer service:
-mq.publish('user.created', { userId: 'u_123', email: 'a@b.com' });</code></pre>
+await mq.publish('user.created', { userId: 'u_123', email: 'a@b.com' });</code></pre>
 
 <p>Three independent consumers, three independent failure modes, three independent tuning knobs. One publish.</p>
 
@@ -76,7 +76,7 @@ mq.publish('user.created', { userId: 'u_123', email: 'a@b.com' });</code></pre>
 
 <h3>Version the schema</h3>
 
-<pre><code data-lang="ts">mq.publish('user.created', {
+<pre><code data-lang="ts">await mq.publish('user.created', {
   schemaVersion: 1,
   userId: 'u_123',
   email: 'a@b.com',

@@ -104,7 +104,7 @@ await runMQ.process('user.created', {
   await sendEmail(message.message);
 });
 
-runMQ.publish('user.created', {
+await runMQ.publish('user.created', {
   userId: '123',
   email: 'user@example.com',
   name: 'John Doe',

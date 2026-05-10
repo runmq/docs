@@ -3,8 +3,6 @@
 <p class="lead">
   The full type surface for the <code>runmq</code> core package. The NestJS module re-exports the same types under <code>nestjs-runmq</code>.
 </p>
-<div data-version-toggle></div>
-
 <h2>Connection configuration</h2>
 <table class="props">
   <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
@@ -13,6 +11,7 @@
     <tr><td class="prop-name">reconnectDelay</td><td><code>number</code></td><td class="prop-default">5000</td><td>Delay (ms) before attempting to reconnect after a disconnection.</td></tr>
     <tr><td class="prop-name">maxReconnectAttempts</td><td><code>number</code></td><td class="prop-default">5</td><td>Maximum number of reconnection attempts.</td></tr>
     <tr data-version="2"><td class="prop-name">usePublisherConfirms</td><td><code>boolean</code></td><td class="prop-default">true</td><td>Enable RabbitMQ publisher confirms on the user publish channel. When <code>true</code>, <code>publish()</code> resolves only after the broker acks the message and rejects on broker error. Set to <code>false</code> for fire-and-forget publishing. <strong>New in 2.x.</strong></td></tr>
+    <tr data-version="2"><td class="prop-name">logFullMessagePayload</td><td><code>boolean</code></td><td class="prop-default">false</td><td>If <code>true</code>, RunMQ includes the full message body in info/error log lines (publish success, per-attempt failure, max-retries-reached). Off by default — large payloads at high throughput allocate significant garbage even when filtered out by the log level. With it off, every log line still carries <code>correlationId</code> and <code>messageId</code> so you can recover the body from the broker. Turn on for development or targeted debugging. <strong>New in 2.x.</strong></td></tr>
     <tr><td class="prop-name">management</td><td><code>ManagementConfiguration</code></td><td class="prop-default">—</td><td>RabbitMQ management API configuration.</td></tr>
   </tbody>
 </table>

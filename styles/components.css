@@ -714,6 +714,16 @@
   background: var(--surface);
   font-size: 12px;
 }
+.topbar__version.version-toggle {
+  margin: 0;
+  padding: 3px 4px 3px 10px;
+  font-size: 11px;
+}
+.topbar__version .version-toggle__buttons button { padding: 3px 9px; font-size: 11px; }
+@media (max-width: 720px) {
+  .topbar__version .version-toggle__label { display: none; }
+  .topbar__version.version-toggle { padding: 3px; }
+}
 .version-toggle__label {
   color: var(--text-2);
   font-weight: 500;

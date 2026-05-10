@@ -83,7 +83,7 @@ await runMQ.process('user.created', {
 
 <h2>Publish a message</h2>
 
-<pre><code data-lang="ts">runMQ.publish('user.created', {
+<pre><code data-lang="ts">await runMQ.publish('user.created', {
   userId: '123',
   email: 'user@example.com',
   name: 'John Doe',

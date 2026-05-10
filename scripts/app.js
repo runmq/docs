@@ -1,5 +1,5 @@
 import { NAV, flatRoutes } from './nav.js';
-import { enhanceAll } from './components.js';
+import { enhanceAll, enhanceVersionToggle } from './components.js';
 
 const $article = document.getElementById('article');
 const $sidebar = document.querySelector('.sidebar__nav');
@@ -169,6 +169,7 @@ function toggleTheme() {
    Boot
    ───────────────────────────────────────────── */
 renderSidebar();
+enhanceVersionToggle(document.body);
 
 window.addEventListener('hashchange', handleRouteChange);
 $themeToggle.addEventListener('click', toggleTheme);

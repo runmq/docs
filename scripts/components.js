@@ -241,6 +241,8 @@ function enhanceTables(root) {
   });
 }
 
+export { enhanceVersionToggle };
+
 export function enhanceAll(root) {
   enhanceCodeBlocks(root);
   enhanceTabs(root);

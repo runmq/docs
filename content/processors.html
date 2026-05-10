@@ -4,8 +4,6 @@
   A processor is a named subscription to a topic. It owns a queue, a DLQ, a retry policy, and a concurrency level.
   Same topic, multiple processors? That's pub/sub, by construction.
 </p>
-<div data-version-toggle></div>
-
 <h2>Anatomy</h2>
 
 <pre><code data-lang="ts">await mq.process(topic, config, handler);</code></pre>
@@ -103,5 +101,5 @@ await mq.process&lt;UserCreated&gt;('user.created', {
 <pre><code data-lang="ts">await mq.process('user.created', { name: 'emailService',  attempts: 3 }, sendEmail);
 await mq.process('user.created', { name: 'analyticsSvc',  attempts: 5 }, track);
 
-mq.publish('user.created', { /* payload */ });
+await mq.publish('user.created', { /* payload */ });
 // → both processors receive the message, atomically.</code></pre>
