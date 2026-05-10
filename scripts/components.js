@@ -197,6 +197,44 @@ function openLightbox(src, alt) {
   document.addEventListener('keydown', onKey);
 }
 
+function enhanceVersionToggle(root) {
+  const toggles = root.querySelectorAll('[data-version-toggle]');
+  if (!toggles.length) return;
+
+  const stored = localStorage.getItem('rmq-version');
+  const initial = stored === '1' ? '1' : '2';
+
+  function applyVersion(v) {
+    document.querySelectorAll('[data-version]').forEach((el) => {
+      if (el.hasAttribute('data-version-toggle')) return;
+      el.dataset.versionActive = el.getAttribute('data-version') === v ? 'true' : 'false';
+    });
+    document.querySelectorAll('[data-version-toggle]').forEach((wrap) => {
+      wrap.querySelectorAll('button').forEach((b) => {
+        b.setAttribute('aria-selected', b.dataset.version === v ? 'true' : 'false');
+      });
+    });
+    localStorage.setItem('rmq-version', v);
+  }
+
+  toggles.forEach((wrap) => {
+    if (wrap.classList.contains('version-toggle--ready')) return;
+    wrap.classList.add('version-toggle', 'version-toggle--ready');
+    wrap.innerHTML = `
+      <span class="version-toggle__label">API version</span>
+      <div class="version-toggle__buttons" role="tablist" aria-label="Select API version">
+        <button type="button" role="tab" data-version="1">1.x</button>
+        <button type="button" role="tab" data-version="2">2.x</button>
+      </div>
+    `;
+    wrap.querySelectorAll('button').forEach((btn) => {
+      btn.addEventListener('click', () => applyVersion(btn.dataset.version));
+    });
+  });
+
+  applyVersion(initial);
+}
+
 function enhanceTables(root) {
   root.querySelectorAll('table').forEach((table) => {
     if (table.parentElement?.classList.contains('table-scroll')) return;
@@ -215,4 +253,5 @@ export function enhanceAll(root) {
   enhanceTables(root);
   enhanceHeadingAnchors(root);
   enhanceScreenshots(root);
+  enhanceVersionToggle(root);
 }

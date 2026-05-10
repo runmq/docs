@@ -701,3 +701,50 @@
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+
+/* ───── Version toggle ───── */
+.version-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 18px 0;
+  padding: 6px 8px 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 12px;
+}
+.version-toggle__label {
+  color: var(--text-2);
+  font-weight: 500;
+  letter-spacing: -0.005em;
+}
+.version-toggle__buttons {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--bg-soft);
+  border-radius: 999px;
+}
+.version-toggle__buttons button {
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: var(--font-body);
+  padding: 4px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.version-toggle__buttons button:hover { color: var(--text); }
+.version-toggle__buttons button[aria-selected='true'] {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+
+[data-version]:not([data-version-toggle]) { display: none; }
+[data-version][data-version-active='true'] { display: revert; }
+tr[data-version][data-version-active='true'] { display: table-row; }

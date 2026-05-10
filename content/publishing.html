@@ -3,10 +3,18 @@
 <p class="lead">
   Publishing is intentionally minimal — pick a topic, hand it a payload, and RunMQ takes care of routing, durability, and delivery.
 </p>
+<div data-version-toggle></div>
 
 <h2>The publish API</h2>
 
+<div data-version="1">
 <pre><code data-lang="ts">mq.publish(topic: string, message: Record&lt;string, any&gt;, correlationId?: string): void;</code></pre>
+<p class="muted">In 1.x, <code>publish()</code> is fire-and-forget — it returns once the message is handed to the AMQP buffer, with no broker-level confirmation.</p>
+</div>
+<div data-version="2">
+<pre><code data-lang="ts">mq.publish(topic: string, message: Record&lt;string, any&gt;, correlationId?: string): Promise&lt;void&gt;;</code></pre>
+<p class="muted">In 2.x, <code>publish()</code> is async and (by default) waits for a broker ack before resolving — see <a href="#/publishing#confirmed-delivery-default-on">Confirmed delivery</a>.</p>
+</div>
 
 <ul>
   <li><strong><code>topic</code></strong> — the topic you're publishing to. Every processor subscribed to this topic receives the message.</li>
@@ -16,15 +24,39 @@
 
 <h2>Examples</h2>
 
-<pre><code data-lang="ts">// Simple publish
-mq.publish('user.created', {
+<pre><code data-lang="ts">// Simple publish — await so broker rejections surface as exceptions
+await mq.publish('user.created', {
   userId: 'u_123',
   email: 'user@example.com',
   name: 'John Doe',
 });
 
 // With a correlation id for distributed tracing
-mq.publish('order.placed', orderPayload, requestContext.traceId);</code></pre>
+await mq.publish('order.placed', orderPayload, requestContext.traceId);</code></pre>
+
+<div data-version="2">
+<h2>Confirmed delivery (default on)</h2>
+<p>
+  <strong>New in 2.x.</strong> By default, <code>publish()</code> uses <strong>RabbitMQ publisher confirms</strong>: the returned promise resolves only after the broker has accepted the message, and rejects on broker error (alarm state, mandatory routing failure, etc.). <code>await</code> the call so silent drops become loud failures you can act on.
+</p>
+<p>
+  Need raw fire-and-forget throughput? Set <code>usePublisherConfirms: false</code> on your <code>RunMQConnectionConfig</code>. The promise then resolves once the message is flushed to the TCP socket — fast, but with no delivery guarantee.
+</p>
+<pre><code data-lang="ts">const mq = await RunMQ.start({
+  url: 'amqp://localhost:5672',
+  usePublisherConfirms: false, // opt out — fire-and-forget
+});</code></pre>
+<p class="muted">
+  Note: DLQ publishes from the consumer chain are <em>always</em> confirmed regardless of this setting. The message-loss risk there is not negotiable.
+</p>
+</div>
+
+<div data-version="1">
+<h2>Delivery guarantees (1.x)</h2>
+<p>
+  In 1.x, <code>publish()</code> is fire-and-forget — there is no broker-level confirm. A successful return only means the message was handed to the AMQP buffer; broker rejections (alarm state, mandatory routing failure, etc.) are not surfaced to the caller. If you need confirmed delivery, upgrade to 2.x and use the default <code>usePublisherConfirms: true</code>.
+</p>
+</div>
 
 <h2>Atomic fan-out</h2>
 <p>

@@ -4,6 +4,7 @@
   Two decorators do the heavy lifting: <code>@Processor</code> declares the queue, <code>@ProcessMessage</code> marks the handler.
   Everything else is conventional NestJS.
 </p>
+<div data-version-toggle></div>
 
 <h2>Anatomy of <code>@Processor()</code></h2>
 
@@ -12,7 +13,8 @@
   <tbody>
     <tr><td class="prop-name">topic</td><td><code>string</code></td><td class="prop-default">—</td><td>The topic this processor subscribes to.</td></tr>
     <tr><td class="prop-name">name</td><td><code>string</code></td><td class="prop-default">—</td><td>Unique processor name. Each name → its own queue and DLQ.</td></tr>
-    <tr><td class="prop-name">consumersCount</td><td><code>number</code></td><td class="prop-default">1</td><td>Concurrent in-flight messages (RabbitMQ prefetch).</td></tr>
+    <tr data-version="1"><td class="prop-name">consumersCount</td><td><code>number</code></td><td class="prop-default">1</td><td>Concurrent in-flight messages (RabbitMQ prefetch).</td></tr>
+    <tr data-version="2"><td class="prop-name">consumersCount</td><td><code>number</code></td><td class="prop-default">1</td><td>Concurrent consumers (independent AMQP channels). Each consumer keeps its own prefetch window, so total in-flight = <code>consumersCount × prefetch</code>.</td></tr>
     <tr><td class="prop-name">attempts</td><td><code>number</code></td><td class="prop-default">1</td><td>Maximum delivery attempts before DLQ.</td></tr>
     <tr><td class="prop-name">attemptsDelay</td><td><code>number</code></td><td class="prop-default">1000</td><td>Milliseconds between retries.</td></tr>
     <tr><td class="prop-name">usePoliciesForDelay</td><td><code>boolean</code></td><td class="prop-default">false</td><td>Use RabbitMQ policies for the retry delay TTL. <strong>Recommended.</strong></td></tr>

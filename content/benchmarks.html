@@ -109,7 +109,7 @@
 
 <h2 id="caveats">Known caveats</h2>
 <ul>
-  <li><strong>Different guarantees on publish.</strong> RunMQ's <code>publish()</code> writes to an in-process AMQP buffer; BullMQ's <code>addBulk()</code> awaits a Redis pipeline confirmation. Same scenario, different semantics — RunMQ is measuring "buffer write speed," BullMQ "confirmed persistence speed."</li>
+  <li><strong>Confirmed publishes by default.</strong> RunMQ's <code>publish()</code> awaits a broker ack out of the box (publisher confirms enabled by default), measuring "confirmed persistence speed" — the same guarantee BullMQ's <code>addBulk()</code> provides via its Redis pipeline confirmation. Under that confirmed mode RunMQ measures <strong>~56,400 msg/s — roughly 80% above BullMQ's ~32,200 msg/s</strong> on the same hardware. If you opt out via <code>usePublisherConfirms: false</code>, RunMQ becomes a buffer write (no delivery guarantee) and the headline number climbs further, but the comparison stops being apples-to-apples.</li>
   <li><strong>Execution ordering is fixed.</strong> RunMQ runs first in every scenario, paying the JIT cold-start cost. This biases <em>against</em> RunMQ.</li>
   <li><strong>1 ms simulated work in concurrent-consumer tests</strong> over-weights per-message overhead. Realistic 10–100 ms work would narrow the gap.</li>
 </ul>
