@@ -123,21 +123,6 @@ button {
   font-family: inherit;
 }
 
-.skip-link {
-  position: absolute;
-  top: -40px;
-  left: 8px;
-  padding: 8px 14px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text);
-  z-index: 100;
-}
-.skip-link:focus {
-  top: 8px;
-}
-
 /* ───── Topbar ───── */
 .topbar {
   position: sticky;
