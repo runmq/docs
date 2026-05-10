@@ -6,6 +6,10 @@
 </p>
 
 <div class="callout callout--info">
+  <strong>Why this comparison exists.</strong> BullMQ is the most popular queue in Node land, so it's the natural reference point — and people kept asking. This page is here mostly out of curiosity. <strong>RunMQ isn't trying to win benchmarks.</strong> Its goal is durability and reliability for production systems running at scale: broker-driven retries, dead-lettering, backpressure, observability via Pulse, predictable behavior under failure. That said, the numbers below show RunMQ holds its own — and is faster in most cases — which is a nice bonus, but not the reason to pick it.
+</div>
+
+<div class="callout callout--info">
   <strong>Transparency.</strong> The benchmark was written by Claude (Anthropic) at the request of the RunMQ maintainer, with explicit instructions to optimize BullMQ to the maximum (<code>addBulk()</code>, <code>skipStalledCheck</code>, <code>skipLockRenewal</code>, etc.). Both libraries got equal Docker resources (2 CPU, 4 GB RAM) and identical settling time. The two systems have fundamentally different architectures, so see <a href="#caveats">Known caveats</a> for what these numbers really mean.
 </div>
 
