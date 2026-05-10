@@ -207,6 +207,7 @@ function enhanceVersionToggle(root) {
   function applyVersion(v) {
     document.querySelectorAll('[data-version]').forEach((el) => {
       if (el.hasAttribute('data-version-toggle')) return;
+      if (el.closest('[data-version-toggle]')) return;
       el.dataset.versionActive = el.getAttribute('data-version') === v ? 'true' : 'false';
     });
     document.querySelectorAll('[data-version-toggle]').forEach((wrap) => {
