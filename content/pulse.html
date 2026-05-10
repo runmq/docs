@@ -100,6 +100,16 @@ cd backend &amp;&amp; npm install &amp;&amp; npm run start:dev
 # Frontend (Next.js 14, port 3000)
 cd frontend &amp;&amp; npm install &amp;&amp; npm run dev</code></pre>
 
+<div class="callout callout--warn">
+  <strong>Source of truth is your services, not Pulse.</strong> Toggling retries, toggling DLQ routing, or
+  changing retry delay from Pulse is meant for <em>live incidents and on-the-fly tuning</em> — adjusting
+  behavior without a redeploy. These changes are written as RabbitMQ policies/bindings, so they apply
+  immediately, but they are <strong>not</strong> persisted back into your service code. The next time a
+  service starts up, RunMQ asserts the topology described in your processor configuration and any drift
+  introduced from Pulse will be overwritten. Treat Pulse changes as temporary; once the incident is over,
+  fold the new values back into your processor config and redeploy.
+</div>
+
 <h2>How it works</h2>
 <p>
   Pulse talks to RabbitMQ's Management API directly — no extra database, no agents to install. RunMQ-managed
