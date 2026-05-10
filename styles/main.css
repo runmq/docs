@@ -190,6 +190,17 @@ button {
   line-height: 1;
 }
 
+.brand__tag {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: 4px;
+  color: var(--accent-text);
+  background: var(--accent-soft);
+}
+
 .topbar__nav {
   display: flex;
   gap: 22px;
