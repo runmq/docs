@@ -207,12 +207,11 @@ function enhanceVersionToggle(root) {
   function applyVersion(v) {
     document.querySelectorAll('[data-version]').forEach((el) => {
       if (el.hasAttribute('data-version-toggle')) return;
-      if (el.closest('[data-version-toggle]')) return;
       el.dataset.versionActive = el.getAttribute('data-version') === v ? 'true' : 'false';
     });
     document.querySelectorAll('[data-version-toggle]').forEach((wrap) => {
-      wrap.querySelectorAll('button').forEach((b) => {
-        b.setAttribute('aria-selected', b.dataset.version === v ? 'true' : 'false');
+      wrap.querySelectorAll('button[data-set-version]').forEach((b) => {
+        b.setAttribute('aria-selected', b.dataset.setVersion === v ? 'true' : 'false');
       });
     });
     localStorage.setItem('rmq-version', v);
@@ -224,12 +223,12 @@ function enhanceVersionToggle(root) {
     wrap.innerHTML = `
       <span class="version-toggle__label">API version</span>
       <div class="version-toggle__buttons" role="tablist" aria-label="Select API version">
-        <button type="button" role="tab" data-version="1">1.x</button>
-        <button type="button" role="tab" data-version="2">2.x</button>
+        <button type="button" role="tab" data-set-version="1">1.x</button>
+        <button type="button" role="tab" data-set-version="2">2.x</button>
       </div>
     `;
-    wrap.querySelectorAll('button').forEach((btn) => {
-      btn.addEventListener('click', () => applyVersion(btn.dataset.version));
+    wrap.querySelectorAll('button[data-set-version]').forEach((btn) => {
+      btn.addEventListener('click', () => applyVersion(btn.dataset.setVersion));
     });
   });
 
